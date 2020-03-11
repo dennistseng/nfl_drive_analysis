@@ -19,7 +19,7 @@ from collections import Counter
 #from imblearn.datasets import make_imbalance
 
 # Load dataset
-rawPlayByPlay = pd.read_csv("./data/raw/NFL Play by Play 2009-2018 (v5).csv", low_memory = False)
+rawPlayByPlay = pd.read_csv("../data/raw/NFL Play by Play 2009-2018 (v5).csv", low_memory = False)
 
 # Remove any colums deemed unecessary for both pre-processing and analysis 
 del rawPlayByPlay['fumble_recovery_1_player_id']
@@ -96,6 +96,7 @@ del rawPlayByPlay['lateral_interception_player_name']
 del rawPlayByPlay['interception_player_id']
 del rawPlayByPlay['interception_player_name']
 del rawPlayByPlay['lateral_sack_player_id']
+del rawPlayByPlay['lateral_sack_player_name']
 del rawPlayByPlay['lateral_rusher_player_name']
 del rawPlayByPlay['lateral_rusher_player_id']
 del rawPlayByPlay['rusher_player_name']
@@ -214,6 +215,7 @@ del rawPlayByPlay['timeout_team']
 del rawPlayByPlay['td_team']
 del rawPlayByPlay['yrdln']
 del rawPlayByPlay['half_seconds_remaining']
+del rawPlayByPlay['total_home_raw_air_wpa']
 
 # Remove any duplicate rows
 rawPlayByPlay.drop_duplicates(keep='first', inplace=True)
@@ -284,6 +286,15 @@ rawPlayByPlay = rawPlayByPlay[~(rawPlayByPlay['play_type'] == "kickoff")]
 idx = rawPlayByPlay.groupby(['game_id','drive', 'posteam'])['game_seconds_remaining'].idxmax()
 FirstPlays = rawPlayByPlay.loc[idx, ['game_id', 'drive', 'posteam', 'game_seconds_remaining', 'yardline_100']]
 rawPlayByPlay = pd.merge(rawPlayByPlay, FirstPlays, how='left', on=['game_id', 'drive', 'posteam'])
+rawPlayByPlay.rename(columns={'game_seconds_remaining_x':'game_seconds_remaining', 'game_seconds_remaining_y':'drive_starting_time', 'yardline_100_x':'yardline_100', 'yardline_100_y':'drive_starting_location'}, inplace=True)
+
+
+# Create last play table to determine time elapsed per drive
+l_idx = rawPlayByPlay.groupby(['game_id','drive', 'posteam'])['game_seconds_remaining'].idxmin()
+LastPlays = rawPlayByPlay.loc[l_idx, ['game_id', 'drive', 'posteam', 'game_seconds_remaining', 'yardline_100']]
+rawPlayByPlay = pd.merge(rawPlayByPlay, LastPlays, how='left', on=['game_id', 'drive', 'posteam'])
+rawPlayByPlay.rename(columns={'game_seconds_remaining_x':'game_seconds_remaining', 'game_seconds_remaining_y':'drive_end_time', 'yardline_100_x':'yardline_100', 'yardline_100_y':'drive_end_location'}, inplace = True)
+
 
 # Convert dates to usable months and year attributes
 rawPlayByPlay['GameMonth'] = pd.DatetimeIndex(rawPlayByPlay['game_date']).month
@@ -317,7 +328,7 @@ PenaltiesDef = PenaltiesDef.groupby(['game_id', 'drive', 'posteam']).agg({'penal
 rawPlayByPlay = rawPlayByPlay[~(rawPlayByPlay['play_type'] == "no_play")]
 
 # Take out punts and field goals only if they're the last play in the drive
-idx = rawPlayByPlay.groupby(['game_id', 'drive', 'posteam'])['game_seconds_remaining_x'].idxmin()
+idx = rawPlayByPlay.groupby(['game_id', 'drive', 'posteam'])['game_seconds_remaining'].idxmin()
 PuntsAndFG = rawPlayByPlay.loc[idx]
 PuntsAndFG = PuntsAndFG[((PuntsAndFG['play_type'] == 'field_goal') | (PuntsAndFG['play_type'] == 'punt'))]
 
@@ -330,7 +341,7 @@ FG.drop_duplicates(keep='first')
 rawPlayByPlay = rawPlayByPlay[~rawPlayByPlay.index.isin(PuntsAndFG.index)]
 
 # Take out plays labeled qb_kneels that are at the begining of the drive (touchbacks)
-idx = rawPlayByPlay.groupby(['game_id', 'drive', 'posteam'])['game_seconds_remaining_x'].idxmax()
+idx = rawPlayByPlay.groupby(['game_id', 'drive', 'posteam'])['game_seconds_remaining'].idxmax()
 Touchbacks = rawPlayByPlay.loc[idx]
 Touchbacks = Touchbacks[(Touchbacks['play_type'] == 'qb_kneel')]
 
@@ -347,3 +358,11 @@ Runs.rename({'yards_gained': 'RunYardage'}, axis=1, inplace=True)
 
 DrivePlays = rawPlayByPlay[['game_id', 'drive','posteam','play_id']].groupby(['game_id', 'drive', 'posteam']).count()
 DrivePlays.rename({'play_id': 'Count'}, axis=1, inplace=True)
+
+rawPlayByPlay.to_csv('../data/clean_play_by_play/clean_play_by_play.csv')
+
+#######################################################
+## Create Drive Dataset
+#######################################################
+
+
