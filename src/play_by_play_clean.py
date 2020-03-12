@@ -18,9 +18,16 @@ import datetime
 from collections import Counter
 #from imblearn.datasets import make_imbalance
 
+# %% 
+#######################################################
+## Load and Clean Play By Play Dataset
+#######################################################
+
 # Load dataset
 rawPlayByPlay = pd.read_csv("../data/raw/NFL Play by Play 2009-2018 (v5).csv", low_memory = False)
 
+
+# %% 
 # Remove any colums deemed unecessary for both pre-processing and analysis 
 del rawPlayByPlay['fumble_recovery_1_player_id']
 del rawPlayByPlay['fumble_recovery_1_team']
@@ -220,6 +227,9 @@ del rawPlayByPlay['total_home_raw_air_wpa']
 # Remove any duplicate rows
 rawPlayByPlay.drop_duplicates(keep='first', inplace=True)
 
+
+# %% Clean values within columns
+
 # Replace any null/None/NaN values
 rawPlayByPlay['desc'].fillna('Other' , inplace=True)
 rawPlayByPlay['play_type'].fillna('Other' , inplace=True)
@@ -237,6 +247,9 @@ rawPlayByPlay['timeout'].fillna(0, inplace=True)
 # Set description strings to lowercase
 rawPlayByPlay['desc'] = rawPlayByPlay['desc'].str.lower()
 
+
+# %%
+
 # Calculate/determine if a play resulted in points
 # Fixes errors within data (defensive 2 point scores)
 rawPlayByPlay['points_earned'] = rawPlayByPlay['score_differential_post'] - rawPlayByPlay['score_differential']
@@ -247,6 +260,9 @@ del rawPlayByPlay['score_differential_post']
 
 rawPlayByPlay['play_type'] = np.where(rawPlayByPlay['two_point_attempt'] == 1, "2pt Attempt", rawPlayByPlay['play_type'])
 rawPlayByPlay['points_earned'] = np.where(rawPlayByPlay['incomplete_pass'] == 1, 0, rawPlayByPlay['points_earned'])
+
+
+# %% Time Stoppages
 
 # Separate time stoppages (end of quarters, end of games, timeouts)
 timeouts = rawPlayByPlay[(rawPlayByPlay['timeout'] == 1) & (rawPlayByPlay['desc'].str.contains('timeout') & rawPlayByPlay['down'] == 0)]
@@ -259,6 +275,8 @@ playStoppages = playStoppages.groupby(['game_id', 'drive']).agg(['count'])
 
 endOfGames = rawPlayByPlay[(rawPlayByPlay['desc'].str.contains('end game')) | (rawPlayByPlay['desc'].str.contains('end of game'))]
 
+
+# %%
 # Additional Cleanup for offsetting penalties (no plays), substitutions, other non-play tuples
 misc = rawPlayByPlay[(rawPlayByPlay['play_type'] == "Other") & (rawPlayByPlay['game_seconds_remaining'] == -1)]
 offset = rawPlayByPlay[(rawPlayByPlay['desc'].str.contains('offsetting')) & (rawPlayByPlay['play_type'] == "Other")]
@@ -266,6 +284,7 @@ misc2 = rawPlayByPlay[(rawPlayByPlay['play_type'] == "Other")]
 misc = pd.concat([misc,misc2])
 del misc2
 
+# %%
 # Remove Timeouts and Play Stoppages (Non Penalties) from Play Set
 rawPlayByPlay = rawPlayByPlay[~((rawPlayByPlay['timeout'] == 1) & (rawPlayByPlay['play_type'] == "no_play") & (rawPlayByPlay['down'] == 0))]
 rawPlayByPlay = rawPlayByPlay[~((rawPlayByPlay['down'] == 0) & (rawPlayByPlay['desc'].str.contains('timeout')))]
@@ -278,9 +297,13 @@ rawPlayByPlay = rawPlayByPlay[~(rawPlayByPlay['play_type'] == "Other")]
 rawPlayByPlay = rawPlayByPlay[~(rawPlayByPlay['play_type'] == "extra_point")]
 rawPlayByPlay = rawPlayByPlay[~(rawPlayByPlay['play_type'] == "2pt Attempt")]
 
+# %%
 # Remove Kickoffs, as they don't count as the first play of a drive and would affect
 # starting field position calculations
 rawPlayByPlay = rawPlayByPlay[~(rawPlayByPlay['play_type'] == "kickoff")]
+
+
+# %%
 
 # Create first play table to determine starting field position/yards to go
 idx = rawPlayByPlay.groupby(['game_id','drive', 'posteam'])['game_seconds_remaining'].idxmax()
@@ -295,12 +318,15 @@ LastPlays = rawPlayByPlay.loc[l_idx, ['game_id', 'drive', 'posteam', 'game_secon
 rawPlayByPlay = pd.merge(rawPlayByPlay, LastPlays, how='left', on=['game_id', 'drive', 'posteam'])
 rawPlayByPlay.rename(columns={'game_seconds_remaining_x':'game_seconds_remaining', 'game_seconds_remaining_y':'drive_end_time', 'yardline_100_x':'yardline_100', 'yardline_100_y':'drive_end_location'}, inplace = True)
 
-
+# %%
 # Convert dates to usable months and year attributes
 rawPlayByPlay['GameMonth'] = pd.DatetimeIndex(rawPlayByPlay['game_date']).month
 rawPlayByPlay['GameYear'] = pd.DatetimeIndex(rawPlayByPlay['game_date']).year
 del rawPlayByPlay['game_date']
 
+
+
+# %%
 # Create new columns for analysis
 rawPlayByPlay['RunOver10'] = np.where((rawPlayByPlay['play_type'] == "run") & (rawPlayByPlay['yards_gained'] >= 10), 1, 0)
 rawPlayByPlay['PassOver20'] = np.where((rawPlayByPlay['play_type'] == "pass") & (rawPlayByPlay['yards_gained'] >= 20), 1, 0)
@@ -324,6 +350,8 @@ PenaltiesDef = rawPlayByPlay[((rawPlayByPlay['penalty'] == 1) & (rawPlayByPlay['
 PenaltiesDef = PenaltiesDef[['game_id', 'drive', 'posteam', 'penalty', 'penalty_yards']]
 PenaltiesDef = PenaltiesDef.groupby(['game_id', 'drive', 'posteam']).agg({'penalty_yards' : np.sum, 'penalty' : np.sum})
 
+
+# %%
 # Remove 'no play' plays that were needed in case they were penalties, but not for actual drives
 rawPlayByPlay = rawPlayByPlay[~(rawPlayByPlay['play_type'] == "no_play")]
 
@@ -338,8 +366,7 @@ FG['points_earned'] = 3
 
 FG.drop_duplicates(keep='first')
 
-rawPlayByPlay = rawPlayByPlay[~rawPlayByPlay.index.isin(PuntsAndFG.index)]
-
+# %%
 # Take out plays labeled qb_kneels that are at the begining of the drive (touchbacks)
 idx = rawPlayByPlay.groupby(['game_id', 'drive', 'posteam'])['game_seconds_remaining'].idxmax()
 Touchbacks = rawPlayByPlay.loc[idx]
@@ -347,11 +374,38 @@ Touchbacks = Touchbacks[(Touchbacks['play_type'] == 'qb_kneel')]
 
 rawPlayByPlay = rawPlayByPlay[~rawPlayByPlay.index.isin(Touchbacks.index)]
 
-# YPA for Rushes and Passes
 
+# %%
+
+#########
+#This outputs play by play outcomes for use in creating historical features
+#########
+prior_play_by_play = rawPlayByPlay[['play_id','game_id', 'posteam', 'defteam', 'drive', 'sp', 'qtr', 'down', 'ydstogo', 'ydsnet','game_seconds_remaining', 'play_type', 'yards_gained', 'punt_blocked', 'interception', 'fumble_lost', 'points_earned']]
+last_play_idx = prior_play_by_play.groupby(['game_id', 'drive', 'posteam'])['game_seconds_remaining'].idxmin()
+last_plays = prior_play_by_play.loc[last_play_idx]
+
+# set up 'Outcome' column
+last_plays['drive_outcome'] = str(0)
+last_plays['drive_outcome'] = np.where(last_plays['punt_blocked'] == 1, 'punt_blocked', last_plays['drive_outcome'])
+last_plays['drive_outcome'] = np.where(last_plays['fumble_lost'] == 1, 'fumble_lost', last_plays['drive_outcome'])
+last_plays['drive_outcome'] = np.where(last_plays['interception'] == 1, 'interception', last_plays['drive_outcome'])
+last_plays['drive_outcome'] = np.where(last_plays['play_type'] == 'punt', 'punt', last_plays['drive_outcome'])
+last_plays['drive_outcome'] = np.where(last_plays['play_type'] == 'field_goal', 'field_goal', last_plays['drive_outcome'])
+last_plays['drive_outcome'] = np.where(last_plays['points_earned'] == 6, 'touchdown', last_plays['drive_outcome'])
+last_plays['drive_outcome'] = np.where(((last_plays['down'] == 4) & (last_plays['drive_outcome'] == '0')), 'turnover_on_downs', last_plays['drive_outcome'])
+last_plays['drive_outcome'] = np.where(last_plays['drive_outcome'] == 0, 'end_of_half', last_plays['drive_outcome'])
+
+
+# %%
+# Removes punts and field goals from drives for 'clean' play-by-play
+rawPlayByPlay = rawPlayByPlay[~rawPlayByPlay.index.isin(PuntsAndFG.index)]
+
+
+# %%
+
+# YPA for Rushes and Passes
 Passes = rawPlayByPlay[(rawPlayByPlay['play_type']== "pass")].groupby(['game_id', 'drive', 'posteam']).agg({'yards_gained': np.sum})
 Passes.rename({'yards_gained': 'PassYardage'}, axis=1, inplace=True)
-
 
 Runs = rawPlayByPlay[(rawPlayByPlay['play_type']== "run")].groupby(['game_id', 'drive', 'posteam']).agg({'yards_gained': np.sum})
 Runs.rename({'yards_gained': 'RunYardage'}, axis=1, inplace=True)
@@ -359,10 +413,17 @@ Runs.rename({'yards_gained': 'RunYardage'}, axis=1, inplace=True)
 DrivePlays = rawPlayByPlay[['game_id', 'drive','posteam','play_id']].groupby(['game_id', 'drive', 'posteam']).count()
 DrivePlays.rename({'play_id': 'Count'}, axis=1, inplace=True)
 
-rawPlayByPlay.to_csv('../data/clean_play_by_play/clean_play_by_play.csv')
 
+
+# %%
+#########
+#This outputs final play by play data for analysis
+#########
+rawPlayByPlay.to_csv('../data/clean_play_by_play/clean_play_by_play.csv')
+last_plays.to_csv('../data/clean_play_by_play/last_plays.csv')
+
+
+# %%
 #######################################################
 ## Create Drive Dataset
 #######################################################
-
-
