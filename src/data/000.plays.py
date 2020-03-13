@@ -24,10 +24,8 @@ from collections import Counter
 #######################################################
 
 # Load dataset
-rawPlayByPlay = pd.read_csv("../data/raw/NFL Play by Play 2009-2018 (v5).csv", low_memory = False)
+rawPlayByPlay = pd.read_csv("../../data/raw/reg_pbp_2018.csv", low_memory = False)
 
-
-# %% 
 # Remove any colums deemed unecessary for both pre-processing and analysis 
 del rawPlayByPlay['fumble_recovery_1_player_id']
 del rawPlayByPlay['fumble_recovery_1_team']
@@ -226,8 +224,6 @@ del rawPlayByPlay['total_home_raw_air_wpa']
 
 # Remove any duplicate rows
 rawPlayByPlay.drop_duplicates(keep='first', inplace=True)
-
-
 # %% Clean values within columns
 
 # Replace any null/None/NaN values
@@ -324,8 +320,6 @@ rawPlayByPlay['GameMonth'] = pd.DatetimeIndex(rawPlayByPlay['game_date']).month
 rawPlayByPlay['GameYear'] = pd.DatetimeIndex(rawPlayByPlay['game_date']).year
 del rawPlayByPlay['game_date']
 
-
-
 # %%
 # Create new columns for analysis
 rawPlayByPlay['RunOver10'] = np.where((rawPlayByPlay['play_type'] == "run") & (rawPlayByPlay['yards_gained'] >= 10), 1, 0)
@@ -350,7 +344,6 @@ PenaltiesDef = rawPlayByPlay[((rawPlayByPlay['penalty'] == 1) & (rawPlayByPlay['
 PenaltiesDef = PenaltiesDef[['game_id', 'drive', 'posteam', 'penalty', 'penalty_yards']]
 PenaltiesDef = PenaltiesDef.groupby(['game_id', 'drive', 'posteam']).agg({'penalty_yards' : np.sum, 'penalty' : np.sum})
 
-
 # %%
 # Remove 'no play' plays that were needed in case they were penalties, but not for actual drives
 rawPlayByPlay = rawPlayByPlay[~(rawPlayByPlay['play_type'] == "no_play")]
@@ -363,8 +356,9 @@ PuntsAndFG = PuntsAndFG[((PuntsAndFG['play_type'] == 'field_goal') | (PuntsAndFG
 FG = PuntsAndFG[PuntsAndFG['play_type'] == "field_goal"]
 FG = FG[['game_id','drive','posteam','points_earned']]
 FG['points_earned'] = 3
-
 FG.drop_duplicates(keep='first')
+
+
 
 # %%
 # Take out plays labeled qb_kneels that are at the begining of the drive (touchbacks)
@@ -393,16 +387,18 @@ last_plays['drive_outcome'] = np.where(last_plays['play_type'] == 'punt', 'punt'
 last_plays['drive_outcome'] = np.where(last_plays['play_type'] == 'field_goal', 'field_goal', last_plays['drive_outcome'])
 last_plays['drive_outcome'] = np.where(last_plays['points_earned'] == 6, 'touchdown', last_plays['drive_outcome'])
 last_plays['drive_outcome'] = np.where(((last_plays['down'] == 4) & (last_plays['drive_outcome'] == '0')), 'turnover_on_downs', last_plays['drive_outcome'])
-last_plays['drive_outcome'] = np.where(last_plays['drive_outcome'] == 0, 'end_of_half', last_plays['drive_outcome'])
+#last_plays['drive_outcome'] = np.where(last_plays['drive_outcome'] == 0, 'end_of_half', last_plays['drive_outcome'])
 
+# Push drives down by 0 so that when we join with drives dataset, it represents previous play's results
+last_plays['drive'] = last_plays['drive'] - 1
+
+last_plays = last_plays[['play_id','game_id','posteam','defteam', 'drive','qtr','drive_outcome']]
 
 # %%
 # Removes punts and field goals from drives for 'clean' play-by-play
 rawPlayByPlay = rawPlayByPlay[~rawPlayByPlay.index.isin(PuntsAndFG.index)]
 
-
 # %%
-
 # YPA for Rushes and Passes
 Passes = rawPlayByPlay[(rawPlayByPlay['play_type']== "pass")].groupby(['game_id', 'drive', 'posteam']).agg({'yards_gained': np.sum})
 Passes.rename({'yards_gained': 'PassYardage'}, axis=1, inplace=True)
@@ -413,17 +409,16 @@ Runs.rename({'yards_gained': 'RunYardage'}, axis=1, inplace=True)
 DrivePlays = rawPlayByPlay[['game_id', 'drive','posteam','play_id']].groupby(['game_id', 'drive', 'posteam']).count()
 DrivePlays.rename({'play_id': 'Count'}, axis=1, inplace=True)
 
-
-
 # %%
 #########
 #This outputs final play by play data for analysis
 #########
-rawPlayByPlay.to_csv('../data/clean_play_by_play/clean_play_by_play.csv')
-last_plays.to_csv('../data/clean_play_by_play/last_plays.csv')
-
-
-# %%
-#######################################################
-## Create Drive Dataset
-#######################################################
+rawPlayByPlay.to_csv('../../data/clean_play_by_play/plays.csv', index = False)
+last_plays.to_csv('../../data/clean_play_by_play/last_plays.csv', index = False)
+FG.to_csv('../../data/clean_play_by_play/FG.csv')
+PenaltiesDef.to_csv('../../data/clean_play_by_play/PenaltiesDef.csv')
+PenaltiesPos.to_csv('../../data/clean_play_by_play/PenaltiesPos.csv')
+FirstDown.to_csv('../../data/clean_play_by_play/FirstDown.csv')
+ThirdDown.to_csv('../../data/clean_play_by_play/ThirdDown.csv')
+Runs.to_csv('../../data/clean_play_by_play/Runs.csv')
+Passes.to_csv('../../data/clean_play_by_play/Passes.csv')
