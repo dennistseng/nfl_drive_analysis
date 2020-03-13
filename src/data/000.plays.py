@@ -24,7 +24,7 @@ from collections import Counter
 #######################################################
 
 # Load dataset
-rawPlayByPlay = pd.read_csv("../../data/raw/NFL Play by Play 2009-2018 (v5).csv", low_memory = False)
+rawPlayByPlay = pd.read_csv("../../data/raw/reg_pbp_2018.csv", low_memory = False)
 
 # Remove any colums deemed unecessary for both pre-processing and analysis 
 del rawPlayByPlay['fumble_recovery_1_player_id']
@@ -328,6 +328,16 @@ PenaltiesDef = rawPlayByPlay[((rawPlayByPlay['penalty'] == 1) & (rawPlayByPlay['
 PenaltiesDef = PenaltiesDef[['game_id', 'drive', 'posteam', 'penalty', 'penalty_yards']]
 PenaltiesDef = PenaltiesDef.groupby(['game_id', 'drive', 'posteam']).agg({'penalty_yards' : np.sum, 'penalty' : np.sum})
 
+
+# %%
+# Take out plays labeled qb_kneels that are at the begining of the drive (touchbacks)
+idx = rawPlayByPlay.groupby(['game_id', 'drive', 'posteam'])['game_seconds_remaining'].idxmax()
+Touchbacks = rawPlayByPlay.loc[idx]
+Touchbacks = Touchbacks[(Touchbacks['play_type'] == 'qb_kneel')]
+
+rawPlayByPlay = rawPlayByPlay[~rawPlayByPlay.index.isin(Touchbacks.index)]
+
+
 # %%
 # Remove 'no play' plays that were needed in case they were penalties, but not for actual drives
 rawPlayByPlay = rawPlayByPlay[~(rawPlayByPlay['play_type'] == "no_play")]
@@ -341,16 +351,6 @@ FG = PuntsAndFG[PuntsAndFG['play_type'] == "field_goal"]
 FG = FG[['game_id','drive','posteam','points_earned']]
 FG['points_earned'] = 3
 FG.drop_duplicates(keep='first')
-
-
-
-# %%
-# Take out plays labeled qb_kneels that are at the begining of the drive (touchbacks)
-idx = rawPlayByPlay.groupby(['game_id', 'drive', 'posteam'])['game_seconds_remaining'].idxmax()
-Touchbacks = rawPlayByPlay.loc[idx]
-Touchbacks = Touchbacks[(Touchbacks['play_type'] == 'qb_kneel')]
-
-rawPlayByPlay = rawPlayByPlay[~rawPlayByPlay.index.isin(Touchbacks.index)]
 
 
 # %%
@@ -393,6 +393,7 @@ last_plays = last_plays[['game_id','posteam','drive','drive_outcome']]
 
 # %%
 # Removes punts and field goals from drives for 'clean' play-by-play
+
 rawPlayByPlay = rawPlayByPlay[~rawPlayByPlay.index.isin(PuntsAndFG.index)]
 
 # %%
