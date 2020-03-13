@@ -24,7 +24,7 @@ from collections import Counter
 #######################################################
 
 # Load dataset
-rawPlayByPlay = pd.read_csv("../../data/raw/reg_pbp_2018.csv", low_memory = False)
+rawPlayByPlay = pd.read_csv("../../data/raw/NFL Play by Play 2009-2018 (v5).csv", low_memory = False)
 
 # Remove any colums deemed unecessary for both pre-processing and analysis 
 del rawPlayByPlay['fumble_recovery_1_player_id']
@@ -298,22 +298,6 @@ rawPlayByPlay = rawPlayByPlay[~(rawPlayByPlay['play_type'] == "2pt Attempt")]
 # starting field position calculations
 rawPlayByPlay = rawPlayByPlay[~(rawPlayByPlay['play_type'] == "kickoff")]
 
-
-# %%
-
-# Create first play table to determine starting field position/yards to go
-idx = rawPlayByPlay.groupby(['game_id','drive', 'posteam'])['game_seconds_remaining'].idxmax()
-FirstPlays = rawPlayByPlay.loc[idx, ['game_id', 'drive', 'posteam', 'game_seconds_remaining', 'yardline_100']]
-rawPlayByPlay = pd.merge(rawPlayByPlay, FirstPlays, how='left', on=['game_id', 'drive', 'posteam'])
-rawPlayByPlay.rename(columns={'game_seconds_remaining_x':'game_seconds_remaining', 'game_seconds_remaining_y':'drive_starting_time', 'yardline_100_x':'yardline_100', 'yardline_100_y':'drive_starting_location'}, inplace=True)
-
-
-# Create last play table to determine time elapsed per drive
-l_idx = rawPlayByPlay.groupby(['game_id','drive', 'posteam'])['game_seconds_remaining'].idxmin()
-LastPlays = rawPlayByPlay.loc[l_idx, ['game_id', 'drive', 'posteam', 'game_seconds_remaining', 'yardline_100']]
-rawPlayByPlay = pd.merge(rawPlayByPlay, LastPlays, how='left', on=['game_id', 'drive', 'posteam'])
-rawPlayByPlay.rename(columns={'game_seconds_remaining_x':'game_seconds_remaining', 'game_seconds_remaining_y':'drive_end_time', 'yardline_100_x':'yardline_100', 'yardline_100_y':'drive_end_location'}, inplace = True)
-
 # %%
 # Convert dates to usable months and year attributes
 rawPlayByPlay['GameMonth'] = pd.DatetimeIndex(rawPlayByPlay['game_date']).month
@@ -371,6 +355,22 @@ rawPlayByPlay = rawPlayByPlay[~rawPlayByPlay.index.isin(Touchbacks.index)]
 
 # %%
 
+# Create first play table to determine starting field position/yards to go
+idx = rawPlayByPlay.groupby(['game_id','drive', 'posteam'])['game_seconds_remaining'].idxmax()
+FirstPlays = rawPlayByPlay.loc[idx, ['game_id', 'drive', 'posteam', 'game_seconds_remaining', 'yardline_100']]
+rawPlayByPlay = pd.merge(rawPlayByPlay, FirstPlays, how='left', on=['game_id', 'drive', 'posteam'])
+rawPlayByPlay.rename(columns={'game_seconds_remaining_x':'game_seconds_remaining', 'game_seconds_remaining_y':'drive_starting_time', 'yardline_100_x':'yardline_100', 'yardline_100_y':'drive_starting_location'}, inplace=True)
+
+
+# Create last play table to determine time elapsed per drive
+l_idx = rawPlayByPlay.groupby(['game_id','drive', 'posteam'])['game_seconds_remaining'].idxmin()
+LastPlays = rawPlayByPlay.loc[l_idx, ['game_id', 'drive', 'posteam', 'game_seconds_remaining', 'yardline_100']]
+rawPlayByPlay = pd.merge(rawPlayByPlay, LastPlays, how='left', on=['game_id', 'drive', 'posteam'])
+rawPlayByPlay.rename(columns={'game_seconds_remaining_x':'game_seconds_remaining', 'game_seconds_remaining_y':'drive_end_time', 'yardline_100_x':'yardline_100', 'yardline_100_y':'drive_end_location'}, inplace = True)
+
+
+# %%
+
 #########
 #This outputs play by play outcomes for use in creating historical features
 #########
@@ -387,12 +387,9 @@ last_plays['drive_outcome'] = np.where(last_plays['play_type'] == 'punt', 'punt'
 last_plays['drive_outcome'] = np.where(last_plays['play_type'] == 'field_goal', 'field_goal', last_plays['drive_outcome'])
 last_plays['drive_outcome'] = np.where(last_plays['points_earned'] == 6, 'touchdown', last_plays['drive_outcome'])
 last_plays['drive_outcome'] = np.where(((last_plays['down'] == 4) & (last_plays['drive_outcome'] == '0')), 'turnover_on_downs', last_plays['drive_outcome'])
-#last_plays['drive_outcome'] = np.where(last_plays['drive_outcome'] == 0, 'end_of_half', last_plays['drive_outcome'])
+last_plays['drive_outcome'] = np.where(last_plays['drive_outcome'] == '0', 'end_of_half', last_plays['drive_outcome'])
 
-# Push drives down by 0 so that when we join with drives dataset, it represents previous play's results
-last_plays['drive'] = last_plays['drive'] - 1
-
-last_plays = last_plays[['play_id','game_id','posteam','defteam', 'drive','qtr','drive_outcome']]
+last_plays = last_plays[['game_id','posteam','drive','drive_outcome']]
 
 # %%
 # Removes punts and field goals from drives for 'clean' play-by-play
@@ -415,7 +412,7 @@ DrivePlays.rename({'play_id': 'Count'}, axis=1, inplace=True)
 #########
 rawPlayByPlay.to_csv('../../data/clean_play_by_play/plays.csv', index = False)
 last_plays.to_csv('../../data/clean_play_by_play/last_plays.csv', index = False)
-FG.to_csv('../../data/clean_play_by_play/FG.csv')
+FG.to_csv('../../data/clean_play_by_play/FG.csv', index = False)
 PenaltiesDef.to_csv('../../data/clean_play_by_play/PenaltiesDef.csv')
 PenaltiesPos.to_csv('../../data/clean_play_by_play/PenaltiesPos.csv')
 FirstDown.to_csv('../../data/clean_play_by_play/FirstDown.csv')

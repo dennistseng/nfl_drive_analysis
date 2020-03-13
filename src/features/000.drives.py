@@ -25,6 +25,10 @@ Passes = pd.read_csv("../../data/clean_play_by_play/Passes.csv", low_memory = Fa
 Runs = pd.read_csv("../../data/clean_play_by_play/Runs.csv", low_memory = False)
 FG = pd.read_csv("../../data/clean_play_by_play/FG.csv", low_memory = False)
 
+# Team Drive Offense and Defense
+teamDriveOffense = pd.read_csv("../../data/clean_play_by_play/teamDriveOffense.csv", low_memory = False)
+teamDriveDefense = pd.read_csv("../../data/clean_play_by_play/teamDriveDefense.csv", low_memory = False)
+
 # %%
 #######################################################
 ## Create Drive Dataset
@@ -39,6 +43,8 @@ Drives = plays.groupby(['game_id', 'drive', 'posteam']).agg({'posteam_type' :'mi
                                                                      'game_half' : 'min',
                                                                      'yardline_100': 'min',
                                                                      'game_seconds_remaining' : 'min',
+                                                                     'drive_starting_time' : 'min',
+                                                                     'drive_end_time' : 'min',
                                                                      'score_differential' : 'min',
                                                                      'RunOver10' : 'sum',
                                                                      'PassOver20' : 'sum',
@@ -66,9 +72,7 @@ Drives.rename({'tackled_for_loss': 'TackledForLossPlays'}, axis=1, inplace=True)
 Drives.rename({'points_earned': 'PointsScored'}, axis=1, inplace=True)
 
 
-#Drives = pd.merge(Drives, play_outcomes, how = 'left', on=['game_id', 'drive'-1])
-
-
+Drives = pd.merge(Drives, play_outcomes, how = 'left', on=['game_id', 'drive', 'posteam'])
 
 #%%
 # Incorporate 3rd Down, 1st Down, Penalties, Yardage stats
@@ -122,9 +126,8 @@ Drives['defteam'].replace('STL', 'LA', inplace=True)
 Drives['defteam'].replace('SD', 'LAC', inplace=True)
 
 
-'''
+
 # Incorporate defense and offense team data
 Drives_old = Drives.copy()
 Drives = pd.merge(Drives, teamDriveOffense, how = 'left', on=['posteam', 'GameYear'])
 Drives = pd.merge(Drives, teamDriveDefense, how = 'left', on=['defteam', 'GameYear'])
-'''

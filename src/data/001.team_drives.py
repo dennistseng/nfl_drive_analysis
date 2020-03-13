@@ -14,7 +14,7 @@ import numpy as np
 # Replace team names so we can incorporate it back into the Drives Data grouped using rawPlayByPlay
 
 # Team Defense
-teamDriveDefense = pd.read_csv("TeamDefenseYearlyDrivesAgainst.csv", low_memory = False)
+teamDriveDefense = pd.read_csv("../../data/raw/TeamDefenseYearlyDrivesAgainst.csv", low_memory = False)
 teamDriveDefense['Tm'].replace('Houston Texans', 'HOU', inplace=True)
 teamDriveDefense['Tm'].replace('New York Giants', 'NYG', inplace=True)
 teamDriveDefense['Tm'].replace('Jacksonville Jaguars', 'JAC', inplace=True)
@@ -54,7 +54,7 @@ teamDriveDefense['DefStartingYdsToGo'] = 100- teamDriveDefense['Start']
 teamDriveDefense.rename({'Plays.1': 'DefAvgPlaysPerDrive'}, axis=1, inplace=True)
 
 # Load team drive defense - 3rd down conversion stats
-teamDriveDefenseConversion = pd.read_csv("TeamDefenseConversionsAgainst.csv", low_memory = False)
+teamDriveDefenseConversion = pd.read_csv("../../data/raw/TeamDefenseConversionsAgainst.csv", low_memory = False)
 teamDriveDefenseConversion['Tm'].replace('Houston Texans', 'HOU', inplace=True)
 teamDriveDefenseConversion['Tm'].replace('New York Giants', 'NYG', inplace=True)
 teamDriveDefenseConversion['Tm'].replace('Jacksonville Jaguars', 'JAC', inplace=True)
@@ -99,7 +99,7 @@ del teamDriveDefenseConversion['RZPct']
 del teamDriveDefenseConversion['Rk']
 
 # Load team rushing defense
-teamRushingDefense = pd.read_csv("TeamRushingDefense.csv", low_memory = False)
+teamRushingDefense = pd.read_csv("../../data/raw/TeamRushingDefense.csv", low_memory = False)
 teamRushingDefense['Tm'].replace('Houston Texans', 'HOU', inplace=True)
 teamRushingDefense['Tm'].replace('New York Giants', 'NYG', inplace=True)
 teamRushingDefense['Tm'].replace('Jacksonville Jaguars', 'JAC', inplace=True)
@@ -145,7 +145,7 @@ del teamRushingDefense['Rk']
 del teamRushingDefense['G']
 
 # Passing team passing defense stats
-teamPassingDefense = pd.read_csv("TeamPassingDefense.csv", low_memory = False)
+teamPassingDefense = pd.read_csv("../../data/raw/TeamPassingDefense.csv", low_memory = False)
 teamPassingDefense['Tm'].replace('Houston Texans', 'HOU', inplace=True)
 teamPassingDefense['Tm'].replace('New York Giants', 'NYG', inplace=True)
 teamPassingDefense['Tm'].replace('Jacksonville Jaguars', 'JAC', inplace=True)
@@ -268,7 +268,7 @@ teamDefensePlays = pd.crosstab(teamDriveDefense['GameYear'], teamDriveDefense['d
 # Replace team names so we can incorporate it back into the Drives Data grouped using rawPlayByPlay
 
 # Team Offense
-teamDriveOffense = pd.read_csv("TeamOffenseDrives.csv", low_memory = False)
+teamDriveOffense = pd.read_csv("../../data/raw/TeamOffenseDrives.csv", low_memory = False)
 teamDriveOffense['Tm'].replace('Houston Texans', 'HOU', inplace=True)
 teamDriveOffense['Tm'].replace('New York Giants', 'NYG', inplace=True)
 teamDriveOffense['Tm'].replace('Jacksonville Jaguars', 'JAC', inplace=True)
@@ -308,7 +308,7 @@ teamDriveOffense['OffStartingYdsToGo'] = 100- teamDriveOffense['Start']
 teamDriveOffense.rename({'Plays.1': 'OffAvgPlaysPerDrive'}, axis=1, inplace=True)
 
 # Load team drive offense - 3rd down conversion stats
-teamDriveOffenseConversion = pd.read_csv("TeamOffenseConversions.csv", low_memory = False)
+teamDriveOffenseConversion = pd.read_csv("../../data/raw/TeamOffenseConversions.csv", low_memory = False)
 teamDriveOffenseConversion['Tm'].replace('Houston Texans', 'HOU', inplace=True)
 teamDriveOffenseConversion['Tm'].replace('New York Giants', 'NYG', inplace=True)
 teamDriveOffenseConversion['Tm'].replace('Jacksonville Jaguars', 'JAC', inplace=True)
@@ -353,7 +353,7 @@ del teamDriveOffenseConversion['RZPct']
 del teamDriveOffenseConversion['Rk']
 
 # Load team rushing offense
-teamRushingOffense = pd.read_csv("TeamRushingOffense.csv", low_memory = False)
+teamRushingOffense = pd.read_csv("../../data/raw/TeamRushingOffense.csv", low_memory = False)
 teamRushingOffense['Tm'].replace('Houston Texans', 'HOU', inplace=True)
 teamRushingOffense['Tm'].replace('New York Giants', 'NYG', inplace=True)
 teamRushingOffense['Tm'].replace('Jacksonville Jaguars', 'JAC', inplace=True)
@@ -399,7 +399,7 @@ del teamRushingOffense['Rk']
 del teamRushingOffense['G']
 
 # Passing team passing offense stats
-teamPassingOffense = pd.read_csv("TeamPassingOffense.csv", low_memory = False)
+teamPassingOffense = pd.read_csv("../../data/raw/TeamPassingOffense.csv", low_memory = False)
 teamPassingOffense['Tm'].replace('Houston Texans', 'HOU', inplace=True)
 teamPassingOffense['Tm'].replace('New York Giants', 'NYG', inplace=True)
 teamPassingOffense['Tm'].replace('Jacksonville Jaguars', 'JAC', inplace=True)
@@ -516,9 +516,11 @@ del teamDriveOffense['NetPassYardsPerAttempt']
 del teamDriveOffense['PassYardsPerAttempt']
 
 
-
 teamDriveOffense['posteam'].replace('STL', 'LA', inplace=True)
 teamDriveOffense['posteam'].replace('SD', 'LAC', inplace=True)
 
 teamDriveDefense['defteam'].replace('STL', 'LA', inplace=True)
 teamDriveDefense['defteam'].replace('SD', 'LAC', inplace=True)
+
+teamDriveDefense.to_csv('../../data/clean_play_by_play/teamDriveDefense.csv', index = False)
+teamDriveOffense.to_csv('../../data/clean_play_by_play/teamDriveOffense.csv', index = False)
