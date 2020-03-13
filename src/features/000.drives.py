@@ -26,8 +26,8 @@ Runs = pd.read_csv("../../data/clean_play_by_play/Runs.csv", low_memory = False)
 FG = pd.read_csv("../../data/clean_play_by_play/FG.csv", low_memory = False)
 
 # Team Drive Offense and Defense
-teamDriveOffense = pd.read_csv("../../data/clean_play_by_play/teamDriveOffense.csv", low_memory = False)
-teamDriveDefense = pd.read_csv("../../data/clean_play_by_play/teamDriveDefense.csv", low_memory = False)
+#teamDriveOffense = pd.read_csv("../../data/clean_play_by_play/teamDriveOffense.csv", low_memory = False)
+#teamDriveDefense = pd.read_csv("../../data/clean_play_by_play/teamDriveDefense.csv", low_memory = False)
 
 # %%
 #######################################################
@@ -42,7 +42,7 @@ Drives = plays.groupby(['game_id', 'drive', 'posteam']).agg({'posteam_type' :'mi
                                                                      'qtr':'min',
                                                                      'game_half' : 'min',
                                                                      'yardline_100': 'min',
-                                                                     'game_seconds_remaining' : 'min',
+                                                                     'game_seconds_remaining' : 'max',
                                                                      'drive_starting_time' : 'min',
                                                                      'drive_end_time' : 'min',
                                                                      'score_differential' : 'min',
@@ -59,6 +59,7 @@ Drives = plays.groupby(['game_id', 'drive', 'posteam']).agg({'posteam_type' :'mi
 
 
 Drives['RunPercentage'] = Drives['rush_attempt'] / (Drives['rush_attempt'] + Drives['pass_attempt'])
+Drives['drive_length'] = Drives['drive_starting_time'] - Drives['drive_end_time']
 
 #Renaming Cleanup
 Drives.rename({'play_id': 'Plays'}, axis=1, inplace=True)
@@ -70,7 +71,6 @@ Drives.rename({'complete_pass': 'PassCompletions'}, axis=1, inplace=True)
 Drives.rename({'rush_attempt': 'RushAttempts'}, axis=1, inplace=True)
 Drives.rename({'tackled_for_loss': 'TackledForLossPlays'}, axis=1, inplace=True)
 Drives.rename({'points_earned': 'PointsScored'}, axis=1, inplace=True)
-
 
 Drives = pd.merge(Drives, play_outcomes, how = 'left', on=['game_id', 'drive', 'posteam'])
 
@@ -125,9 +125,12 @@ Drives['posteam'].replace('SD', 'LAC', inplace=True)
 Drives['defteam'].replace('STL', 'LA', inplace=True)
 Drives['defteam'].replace('SD', 'LAC', inplace=True)
 
+#%%
+Drives['previous_drive_outcome'] = Drives.groupby(['game_id'])['drive_outcome'].shift(fill_value = 'start_of_half')
+Drives['previous_drive_team'] = Drives.groupby(['game_id'])['posteam'].shift()
 
 
 # Incorporate defense and offense team data
-Drives_old = Drives.copy()
-Drives = pd.merge(Drives, teamDriveOffense, how = 'left', on=['posteam', 'GameYear'])
-Drives = pd.merge(Drives, teamDriveDefense, how = 'left', on=['defteam', 'GameYear'])
+#Drives_old = Drives.copy()
+#Drives = pd.merge(Drives, teamDriveOffense, how = 'left', on=['posteam', 'GameYear'])
+#Drives = pd.merge(Drives, teamDriveDefense, how = 'left', on=['defteam', 'GameYear'])
