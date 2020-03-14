@@ -15,19 +15,19 @@ import pandas as pd
 #######################################################
 
 # Load dataset
-plays = pd.read_csv("../../data/clean_play_by_play/plays.csv", low_memory = False)
-play_outcomes = pd.read_csv("../../data/clean_play_by_play/last_plays.csv", low_memory = False)
-ThirdDown = pd.read_csv("../../data/clean_play_by_play/ThirdDown.csv", low_memory = False)
-FirstDown = pd.read_csv("../../data/clean_play_by_play/FirstDown.csv", low_memory = False)
-PenaltiesPos = pd.read_csv("../../data/clean_play_by_play/PenaltiesPos.csv", low_memory = False)
-PenaltiesDef = pd.read_csv("../../data/clean_play_by_play/PenaltiesDef.csv", low_memory = False)
-Passes = pd.read_csv("../../data/clean_play_by_play/Passes.csv", low_memory = False)
-Runs = pd.read_csv("../../data/clean_play_by_play/Runs.csv", low_memory = False)
-FG = pd.read_csv("../../data/clean_play_by_play/FG.csv", low_memory = False)
+plays = pd.read_csv("../../data/clean/plays.csv", low_memory = False)
+play_outcomes = pd.read_csv("../../data/clean/last_plays.csv", low_memory = False)
+ThirdDown = pd.read_csv("../../data/clean/ThirdDown.csv", low_memory = False)
+FirstDown = pd.read_csv("../../data/clean/FirstDown.csv", low_memory = False)
+PenaltiesPos = pd.read_csv("../../data/clean/PenaltiesPos.csv", low_memory = False)
+PenaltiesDef = pd.read_csv("../../data/clean/PenaltiesDef.csv", low_memory = False)
+Passes = pd.read_csv("../../data/clean/Passes.csv", low_memory = False)
+Runs = pd.read_csv("../../data/clean/Runs.csv", low_memory = False)
+FG = pd.read_csv("../../data/clean/FG.csv", low_memory = False)
 
 # Team Drive Offense and Defense
-#teamDriveOffense = pd.read_csv("../../data/clean_play_by_play/teamDriveOffense.csv", low_memory = False)
-#teamDriveDefense = pd.read_csv("../../data/clean_play_by_play/teamDriveDefense.csv", low_memory = False)
+#teamDriveOffense = pd.read_csv("../../data/clean/teamDriveOffense.csv", low_memory = False)
+#teamDriveDefense = pd.read_csv("../../data/clean/teamDriveDefense.csv", low_memory = False)
 
 # %%
 #######################################################
@@ -125,12 +125,55 @@ Drives['posteam'].replace('SD', 'LAC', inplace=True)
 Drives['defteam'].replace('STL', 'LA', inplace=True)
 Drives['defteam'].replace('SD', 'LAC', inplace=True)
 
-#%%
-Drives['previous_drive_outcome'] = Drives.groupby(['game_id'])['drive_outcome'].shift(fill_value = 'start_of_half')
-Drives['previous_drive_team'] = Drives.groupby(['game_id'])['posteam'].shift()
+#%% Create two columns for previous drive of opposing and poss team
+
+# This was intended to account for if a team was able to possess the ball more than 2 drives in a row, but surprisingly this has never happened in our dataset.
+for l in [1,2]:
+    col_string_outcome = 'previous_drive_outcome_' + str(l)  
+    col_string_plays = 'previous_drive_plays_' + str(l)
+    col_string_drive_length = 'previous_drive_drive_length_' + str(l)
+    col_string_expl_run = 'previous_drive_RunOver10_' + str(l)
+    col_string_expl_pass = 'previous_drive_PassOver20_' + str(l)
+    col_string_yds_to_go = 'previous_drive_StartingYdsToGo_' + str(l)
+    col_string_team = 'previous_drive_team_' + str(l)
+    
+    prev_string_outcome = 'previous_drive_outcome_' + str(l-1)
+    prev_string_plays = 'previous_drive_plays_' + str(l-1)
+    prev_string_drive_length = 'previous_drive_drive_length_' + str(l-1)
+    prev_string_expl_run = 'previous_drive_RunOver10_' + str(l-1)
+    prev_string_expl_pass = 'previous_drive_PassOver20_' + str(l-1)
+    prev_string_yds_to_go = 'previous_drive_StartingYdsToGo_' + str(l-1)
+    prev_string_team = 'previous_drive_team_' + str(l-1)
+    
+    if l == 1:
+        Drives[col_string_outcome] = Drives.groupby(['game_id'])['drive_outcome'].shift(fill_value = 'no_previous_drive')
+        
+        
+        
+        Drives[col_string_team] = Drives.groupby(['game_id'])['posteam'].shift(fill_value = 'n/a')
+    else:
+        Drives[col_string_outcome] = Drives.groupby(['game_id'])[prev_string_outcome].shift(fill_value = 'no_previous_drive')
+        
+        
+        
+        Drives[col_string_team] = Drives.groupby(['game_id'])[prev_string_team].shift(fill_value = 'n/a')
+
+#Drive Logic. We make an assumption that halfs are sufficient enough breaks to alter 'momentum,' but this may not always be the case
+Drives['previous_drive'] = np.where((Drives['previous_drive_team_2'] == Drives['posteam']), Drives['previous_drive_outcome_2'], 'no_previous_drive')
+Drives['previous_drive'] = np.where((Drives['previous_drive_team_1'] == Drives['posteam']), Drives['previous_drive_outcome_1'], Drives['previous_drive'])
+Drives['previous_oppose_drive'] = np.where((Drives['previous_drive_team_2'] == Drives['defteam']), Drives['previous_drive_outcome_2'], 'no_previous_drive')
+Drives['previous_oppose_drive'] = np.where((Drives['previous_drive_team_1'] == Drives['defteam']), Drives['previous_drive_outcome_1'], Drives['previous_oppose_drive'] )
+
+# Remove temporary staging columns
+Drives.drop(['previous_drive_team_1', 'previous_drive_team_2', 'previous_drive_outcome_1', 'previous_drive_outcome_2', 'drive_outcome'], axis=1, inplace=True)
+
 
 
 # Incorporate defense and offense team data
 #Drives_old = Drives.copy()
 #Drives = pd.merge(Drives, teamDriveOffense, how = 'left', on=['posteam', 'GameYear'])
 #Drives = pd.merge(Drives, teamDriveDefense, how = 'left', on=['defteam', 'GameYear'])
+
+#%% 
+
+Drives.to_csv('../../data/drives/drives.csv', index = False)

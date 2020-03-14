@@ -24,7 +24,7 @@ from collections import Counter
 #######################################################
 
 # Load dataset
-rawPlayByPlay = pd.read_csv("../../data/raw/reg_pbp_2018.csv", low_memory = False)
+rawPlayByPlay = pd.read_csv("../../data/raw/NFL Play by Play 2009-2018 (v5).csv", low_memory = False)
 
 # Remove any colums deemed unecessary for both pre-processing and analysis 
 del rawPlayByPlay['fumble_recovery_1_player_id']
@@ -411,12 +411,12 @@ DrivePlays.rename({'play_id': 'Count'}, axis=1, inplace=True)
 #########
 #This outputs final play by play data for analysis
 #########
-rawPlayByPlay.to_csv('../../data/clean_play_by_play/plays.csv', index = False)
-last_plays.to_csv('../../data/clean_play_by_play/last_plays.csv', index = False)
-FG.to_csv('../../data/clean_play_by_play/FG.csv', index = False)
-PenaltiesDef.to_csv('../../data/clean_play_by_play/PenaltiesDef.csv')
-PenaltiesPos.to_csv('../../data/clean_play_by_play/PenaltiesPos.csv')
-FirstDown.to_csv('../../data/clean_play_by_play/FirstDown.csv')
-ThirdDown.to_csv('../../data/clean_play_by_play/ThirdDown.csv')
-Runs.to_csv('../../data/clean_play_by_play/Runs.csv')
-Passes.to_csv('../../data/clean_play_by_play/Passes.csv')
+rawPlayByPlay.to_csv('../../data/clean/plays.csv', index = False)
+last_plays.to_csv('../../data/clean/last_plays.csv', index = False)
+FG.to_csv('../../data/clean/FG.csv', index = False)
+PenaltiesDef.to_csv('../../data/clean/PenaltiesDef.csv')
+PenaltiesPos.to_csv('../../data/clean/PenaltiesPos.csv')
+FirstDown.to_csv('../../data/clean/FirstDown.csv')
+ThirdDown.to_csv('../../data/clean/ThirdDown.csv')
+Runs.to_csv('../../data/clean/Runs.csv')
+Passes.to_csv('../../data/clean/Passes.csv')
