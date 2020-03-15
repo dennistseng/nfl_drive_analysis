@@ -130,44 +130,35 @@ Drives['defteam'].replace('SD', 'LAC', inplace=True)
 # This was intended to account for if a team was able to possess the ball more than 2 drives in a row, but surprisingly this has never happened in our dataset.
 for l in [1,2]:
     col_string_outcome = 'previous_drive_outcome_' + str(l)  
-    col_string_plays = 'previous_drive_plays_' + str(l)
-    col_string_drive_length = 'previous_drive_drive_length_' + str(l)
-    col_string_expl_run = 'previous_drive_RunOver10_' + str(l)
-    col_string_expl_pass = 'previous_drive_PassOver20_' + str(l)
-    col_string_yds_to_go = 'previous_drive_StartingYdsToGo_' + str(l)
     col_string_team = 'previous_drive_team_' + str(l)
     
     prev_string_outcome = 'previous_drive_outcome_' + str(l-1)
-    prev_string_plays = 'previous_drive_plays_' + str(l-1)
-    prev_string_drive_length = 'previous_drive_drive_length_' + str(l-1)
-    prev_string_expl_run = 'previous_drive_RunOver10_' + str(l-1)
-    prev_string_expl_pass = 'previous_drive_PassOver20_' + str(l-1)
-    prev_string_yds_to_go = 'previous_drive_StartingYdsToGo_' + str(l-1)
     prev_string_team = 'previous_drive_team_' + str(l-1)
     
     if l == 1:
         Drives[col_string_outcome] = Drives.groupby(['game_id'])['drive_outcome'].shift(fill_value = 'no_previous_drive')
-        
-        
-        
         Drives[col_string_team] = Drives.groupby(['game_id'])['posteam'].shift(fill_value = 'n/a')
     else:
-        Drives[col_string_outcome] = Drives.groupby(['game_id'])[prev_string_outcome].shift(fill_value = 'no_previous_drive')
-        
-        
-        
+        Drives[col_string_outcome] = Drives.groupby(['game_id'])[prev_string_outcome].shift(fill_value = 'no_previous_drive')     
         Drives[col_string_team] = Drives.groupby(['game_id'])[prev_string_team].shift(fill_value = 'n/a')
 
-#Drive Logic. We make an assumption that halfs are sufficient enough breaks to alter 'momentum,' but this may not always be the case
+# Drive Logic. We make an assumption that halfs are sufficient enough breaks to alter 'momentum,' but this may not always be the case
 Drives['previous_drive'] = np.where((Drives['previous_drive_team_2'] == Drives['posteam']), Drives['previous_drive_outcome_2'], 'no_previous_drive')
 Drives['previous_drive'] = np.where((Drives['previous_drive_team_1'] == Drives['posteam']), Drives['previous_drive_outcome_1'], Drives['previous_drive'])
 Drives['previous_oppose_drive'] = np.where((Drives['previous_drive_team_2'] == Drives['defteam']), Drives['previous_drive_outcome_2'], 'no_previous_drive')
 Drives['previous_oppose_drive'] = np.where((Drives['previous_drive_team_1'] == Drives['defteam']), Drives['previous_drive_outcome_1'], Drives['previous_oppose_drive'] )
 
+# Look at select previous drive stats for the offense only
+Drives['previous_drive_plays'] = Drives.groupby(['game_id', 'posteam'])['drive_outcome'].shift(fill_value = 'no_previous_drive')
+Drives['previous_drive_drive_length'] = Drives.groupby(['game_id', 'posteam'])['Plays'].shift(fill_value = 'no_previous_drive')
+Drives['previous_drive_RunOver10'] = Drives.groupby(['game_id', 'posteam'])['RunOver10'].shift(fill_value = 'no_previous_drive')
+Drives['previous_drive_PassOver20'] = Drives.groupby(['game_id', 'posteam'])['PassOver20'].shift(fill_value = 'no_previous_drive')
+Drives['previous_drive_StartingYdsToGo'] = Drives.groupby(['game_id', 'posteam'])['StartingYdsToGo'].shift(fill_value = 'no_previous_drive')
+Drives['previous_drive_StartingYdsToGo'] = Drives.groupby(['game_id', 'posteam'])['StartingYdsToGo'].shift(fill_value = 'no_previous_drive')
+
+
 # Remove temporary staging columns
 Drives.drop(['previous_drive_team_1', 'previous_drive_team_2', 'previous_drive_outcome_1', 'previous_drive_outcome_2', 'drive_outcome'], axis=1, inplace=True)
-
-
 
 # Incorporate defense and offense team data
 #Drives_old = Drives.copy()
@@ -175,5 +166,96 @@ Drives.drop(['previous_drive_team_1', 'previous_drive_team_2', 'previous_drive_o
 #Drives = pd.merge(Drives, teamDriveDefense, how = 'left', on=['defteam', 'GameYear'])
 
 #%% 
+# For each game and team, create cumulative counts, sums, and averages for particular stats
 
+# Averages
+explosive_runs = Drives.groupby(['game_id', 'posteam'])['RunOver10'].expanding().mean().reset_index([0,1])
+del explosive_runs['game_id']
+del explosive_runs['posteam']
+
+explosive_passes = Drives.groupby(['game_id', 'posteam'])['PassOver20'].expanding().mean().reset_index([0,1])
+del explosive_passes['game_id']
+del explosive_passes['posteam']
+
+average_points = Drives.groupby(['game_id', 'posteam'])['PointsScored'].expanding().mean().reset_index([0,1])
+del average_points['game_id']
+del average_points['posteam']
+
+average_plays = Drives.groupby(['game_id', 'posteam'])['Plays'].expanding().mean().reset_index([0,1])
+del average_plays['game_id']
+del average_plays['posteam']
+
+average_top = Drives.groupby(['game_id', 'posteam'])['drive_length'].expanding().mean().reset_index([0,1])
+del average_top['game_id']
+del average_top['posteam']
+
+average_sacks = Drives.groupby(['game_id', 'posteam'])['sack'].expanding().mean().reset_index([0,1])
+del average_sacks['game_id']
+del average_sacks['posteam']
+
+average_tfl = Drives.groupby(['game_id', 'posteam'])['TackledForLossPlays'].expanding().mean().reset_index([0,1])
+del average_tfl['game_id']
+del average_tfl['posteam']
+
+# Sums to calculate percentages
+
+# Y/A passing
+pass_attempts = Drives.groupby(['game_id', 'posteam'])['PassAttempts'].expanding().sum().reset_index([0,1])
+del pass_attempts['game_id']
+del pass_attempts['posteam']
+
+pass_completions = Drives.groupby(['game_id', 'posteam'])['PassCompletions'].expanding().sum().reset_index([0,1])
+del pass_completions['game_id']
+del pass_completions['posteam']
+
+pass_yardage = Drives.groupby(['game_id', 'posteam'])['PassYardage'].expanding().sum().reset_index([0,1])
+del pass_yardage['game_id']
+del pass_yardage['posteam']
+
+# Y/A rushing
+rush_attempts = Drives.groupby(['game_id', 'posteam'])['RushAttempts'].expanding().sum().reset_index([0,1])
+del rush_attempts['game_id']
+del rush_attempts['posteam']
+
+rush_yardage = Drives.groupby(['game_id', 'posteam'])['RunYardage'].expanding().sum().reset_index([0,1])
+del rush_yardage['game_id']
+del rush_yardage['posteam']
+
+#%%
+
+# Merge above columns
+Drives = pd.merge(Drives, explosive_runs, how = 'left', left_index=True, right_index=True, suffixes = ('','_prior_drives'))
+Drives = pd.merge(Drives, explosive_passes, how = 'left', left_index=True, right_index=True, suffixes = ('','_prior_drives'))
+Drives = pd.merge(Drives, average_points, how = 'left', left_index=True, right_index=True, suffixes = ('','_prior_drives'))
+Drives = pd.merge(Drives, average_plays, how = 'left', left_index=True, right_index=True, suffixes = ('','_prior_drives'))
+Drives = pd.merge(Drives, average_top, how = 'left', left_index=True, right_index=True, suffixes = ('','_prior_drives'))
+Drives = pd.merge(Drives, average_sacks, how = 'left', left_index=True, right_index=True, suffixes = ('','_prior_drives'))
+Drives = pd.merge(Drives, average_tfl, how = 'left', left_index=True, right_index=True, suffixes = ('','_prior_drives'))
+Drives = pd.merge(Drives, pass_attempts, how = 'left', left_index=True, right_index=True, suffixes = ('','_prior_drives'))
+Drives = pd.merge(Drives, pass_completions, how = 'left', left_index=True, right_index=True, suffixes = ('','_prior_drives'))
+Drives = pd.merge(Drives, pass_yardage, how = 'left', left_index=True, right_index=True, suffixes = ('','_prior_drives'))
+Drives = pd.merge(Drives, rush_attempts, how = 'left', left_index=True, right_index=True, suffixes = ('','_prior_drives'))
+Drives = pd.merge(Drives, rush_yardage, how = 'left', left_index=True, right_index=True, suffixes = ('','_prior_drives'))
+
+Drives['prior_drives_expl_pass'] = Drives.groupby(['game_id','posteam'])['PassOver20_prior_drives'].shift(fill_value = 0)
+Drives['prior_drives_expl_run'] = Drives.groupby(['game_id','posteam'])['RunOver10_prior_drives'].shift(fill_value = 0)
+Drives['prior_drives_average_points'] = Drives.groupby(['game_id','posteam'])['PointsScored_prior_drives'].shift(fill_value = 0)
+Drives['prior_drives_average_plays'] = Drives.groupby(['game_id','posteam'])['Plays_prior_drives'].shift(fill_value = 0)
+Drives['prior_drives_average_top'] = Drives.groupby(['game_id','posteam'])['drive_length_prior_drives'].shift(fill_value = 0)
+Drives['prior_drives_average_sacks'] = Drives.groupby(['game_id','posteam'])['sack_prior_drives'].shift(fill_value = 0)
+Drives['prior_drives_average_tfl'] = Drives.groupby(['game_id','posteam'])['TackledForLossPlays_prior_drives'].shift(fill_value = 0)
+Drives['prior_drives_average_pass_attempts'] = Drives.groupby(['game_id','posteam'])['PassAttempts_prior_drives'].shift(fill_value = 0)
+Drives['prior_drives_average_pass_completions'] = Drives.groupby(['game_id','posteam'])['PassCompletions_prior_drives'].shift(fill_value = 0)
+Drives['prior_drives_average_pass_yardage'] = Drives.groupby(['game_id','posteam'])['PassYardage_prior_drives'].shift(fill_value = 0)
+Drives['prior_drives_average_rush_attempts'] = Drives.groupby(['game_id','posteam'])['RushAttempts_prior_drives'].shift(fill_value = 0)
+Drives['prior_drives_average_rush_yardage'] = Drives.groupby(['game_id','posteam'])['RunYardage_prior_drives'].shift(fill_value = 0)
+
+# Remove temporary staging columns
+Drives.drop(['RunOver10_prior_drives', 'PassOver20_prior_drives', 'PointsScored_prior_drives', 'Plays_prior_drives', 'drive_length_prior_drives', 
+             'sack_prior_drives', 'TackledForLossPlays_prior_drives', 'PassAttempts_prior_drives', 'PassCompletions_prior_drives', 'PassYardage_prior_drives',
+             'RushAttempts_prior_drives', 'RunYardage_prior_drives'], axis=1, inplace=True)
+
+
+
+#%%
 Drives.to_csv('../../data/drives/drives.csv', index = False)
