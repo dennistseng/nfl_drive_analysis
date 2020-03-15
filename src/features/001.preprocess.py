@@ -5,60 +5,36 @@ Created on Thu Mar 12 14:02:38 2020
 @author: M44427
 """
 
-import os
 import numpy as np
 import pandas as pd
-import math
-import sklearn as sk
-from sklearn.model_selection import train_test_split
-import pylab as pl
-import matplotlib.pyplot as plt
-from collections import Counter
-from imblearn.datasets import make_imbalance
 
 
+drives = pd.read_csv("../../data/drives/drives.csv", low_memory = False)
 
-# Create a copy of the Drives dataset and remove any columns that won't become categorical attributes 
-DrivesProcessed = Drives.copy()
-DrivesProcessed_old = Drives_old.copy()
-del DrivesProcessed['game_id']
-del DrivesProcessed['drive']
-del DrivesProcessed['posteam']
-del DrivesProcessed['defteam']
-del DrivesProcessed['DefTimePerDrive']
-del DrivesProcessed['OffTimePerDrive']
 
-del DrivesProcessed_old['game_id']
-del DrivesProcessed_old['drive']
-del DrivesProcessed_old['posteam']
-del DrivesProcessed_old['defteam']
+# Remove columns unecessary for analysis
+del drives['game_id']
+del drives['drive']
+del drives['posteam']
+del drives['defteam']
+del drives['game_half']
 
 # Separate Class from Data
-DrivesProcessed['PointsScored'] = DrivesProcessed['PointsScored'].astype('category')
-DriveClass = DrivesProcessed['PointsScored']
-del DrivesProcessed['PointsScored']
-
-DrivesProcessed_old['PointsScored'] = DrivesProcessed_old['PointsScored'].astype('category')
-DriveClass_old = DrivesProcessed_old['PointsScored']
-del DrivesProcessed_old['PointsScored']
+drives['PointsScored'] = drives['PointsScored'].astype('category')
+drives = drives['PointsScored']
+del drives['PointsScored']
 
 # Change certain columns to categorical variables
-DrivesProcessed['posteam_type'] = DrivesProcessed['posteam_type'].astype('category')
-DrivesProcessed['GameYear'] = DrivesProcessed['GameYear'].astype('category')
-DrivesProcessed['GameMonth'] = DrivesProcessed['GameMonth'].astype('category')
-DrivesProcessed['qtr'] = DrivesProcessed['qtr'].astype('category')
-DrivesProcessed['game_half'] = DrivesProcessed['game_half'].astype('category')
-
-DrivesProcessed_old['posteam_type'] = DrivesProcessed_old['posteam_type'].astype('category')
-DrivesProcessed_old['GameYear'] = DrivesProcessed_old['GameYear'].astype('category')
-DrivesProcessed_old['GameMonth'] = DrivesProcessed_old['GameMonth'].astype('category')
-DrivesProcessed_old['qtr'] = DrivesProcessed_old['qtr'].astype('category')
-DrivesProcessed_old['game_half'] = DrivesProcessed_old['game_half'].astype('category')
+drives['posteam_type'] = drives['posteam_type'].astype('category')
+drives['GameYear'] = drives['GameYear'].astype('category')
+drives['GameMonth'] = drives['GameMonth'].astype('category')
+drives['qtr'] = drives['qtr'].astype('category')
+drives['game_half'] = drives['game_half'].astype('category')
 
 
+'''
 # Create Dummy Variables
-DrivesProcessed = pd.get_dummies(DrivesProcessed)
-DrivesProcessed_old = pd.get_dummies(DrivesProcessed_old)
+drives = pd.get_dummies(drives)
 
 # Split samples before normalizing data
 drive_train, drive_test, target_train, target_test = train_test_split(DrivesProcessed, DriveClass, test_size = .2, random_state= 50, stratify = DriveClass)
@@ -79,3 +55,4 @@ normDrivesProcessed_old = pd.DataFrame(normDrivesProcessed_old, columns = drive_
 normDrivesTest_old = pd.DataFrame(min_max_scaler_old.transform(drive_test_old), columns = drive_test_old.columns)
 
 normDrivesProcessed.head()
+'''
