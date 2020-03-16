@@ -54,14 +54,14 @@ warnings.filterwarnings("ignore", category=sklearn.exceptions.ConvergenceWarning
 #####################
 
 imb_class=2                                         #Control switch for type of sampling to deal with imbalanced class (0=None, 1=SMOTE, 2=NearMiss)
-cross_val=3                                         #Control Switch for CV
+cross_val=1                                         #Control Switch for CV
 norm_features=0                                     #Normalize features switch
-feat_select=0                                       #Control Switch for Feature Selection
+feat_select=1                                       #Control Switch for Feature Selection
 fs_type=2                                           #Feature Selection type (1=Stepwise Backwards Removal, 2=Wrapper Select, 3=Univariate Selection)
 lv_filter=0                                         #Control switch for low variance filter on features
 feat_start=1                                        #Start column of features
 k_cnt=5                                             #Number of 'Top k' best ranked features to select, only applies for fs_types 1 and 3
-param_tuning = 1                                    #Turn on model parameter tuning
+param_tuning = 0                                    #Turn on model parameter tuning
 
 
 #Set global model parameters
@@ -205,6 +205,7 @@ if feat_select==1:
                 
     ##3) Filter selected columns from original dataset #########
     selected_features = list(data_np.columns[np.array(sel_idx).astype(bool)])                          #Deletes non-selected features by index)
+    data_test = data_test[selected_features]
     data_np = data_np[selected_features]
 
 
@@ -228,10 +229,10 @@ if param_tuning == 1:
     ################
     max_depth = [int(x) for x in np.linspace(1, 10, num = 10)]
     #max_depth.append(None)
-    class_weight = ['balanced', None]
+    class_weight = ['balanced']
     clf = DecisionTreeClassifier()
     
-    dt_grid = {'criterion': ['gini','entropy'],
+    dt_grid = {'criterion': ['gini'],
                'max_features': ['auto', 'sqrt', 'log2', None],
                'max_depth': max_depth,
                'min_samples_split': [2, 5, 10, 20, 25, 50, 100],
@@ -263,11 +264,11 @@ if param_tuning == 1:
                'max_features': ['auto', 'sqrt', 'log2'],
                'max_depth': max_depth,
                'min_samples_split': [2, 5, 10, 20, 25, 50, 100],
-               'min_samples_leaf': [1, 2, 4, 8, 16, 32, 64],
+               'min_samples_leaf': [2, 4, 8, 16, 32, 64],
                'class_weight': class_weight,
                'bootstrap': [True, False]}
     
-    rf_random = GridSearchCV(estimator = rf, param_grid = rf_grid, scoring=scorers, refit='F1', cv = 5, verbose=10, n_jobs = -1)
+    rf_random = RandomizedSearchCV(estimator = rf, param_distributions = rf_grid, n_iter = 10000, scoring=scorers, refit='F1', cv = 5, verbose=10, n_jobs = -1)
     
     # Fit the random search model
     rf_random.fit(data_np, target_np)
@@ -313,11 +314,11 @@ if param_tuning == 1:
                'min_samples_leaf': [1, 2, 4, 8, 16, 32, 64],
                }
     
-    gb_random = GridSearchCV(estimator = gb, param_grid = gb_grid, scoring=scorers, refit='F1', cv = 5, verbose=10, n_jobs = -1)
+    gb_random = RandomizedSearchCV(estimator = gb, param_distributions = gb_grid, n_iter = 10000, scoring=scorers, refit='F1', cv = 5, verbose=10, n_jobs = -1)
     
     # Fit the random search model
     ab_random.fit(data_np, target_np)
-    best_params.append(('Ada Boost',gb_random.best_params_, gb_random.best_score_))
+    best_params.append(('Gradient Boost',gb_random.best_params_, gb_random.best_score_))
     print(gb_random.best_params_)
     print(gb_random.best_score_)
 
@@ -337,11 +338,11 @@ if param_tuning == 1:
                'min_samples_leaf': [1, 2, 4, 8, 16, 32, 64],
                }
     
-    nn_random = RandomizedSearchCV(estimator = gb, param_distributions = gb_grid, n_iter = 500, scoring=scorers, refit='F1', cv = 5, verbose=10, n_jobs = -1)
+    nn_random = RandomizedSearchCV(estimator = mlp, param_distributions = nn_grid, n_iter = 500, scoring=scorers, refit='F1', cv = 5, verbose=10, n_jobs = -1)
     
     # Fit the random search model
     nn_random.fit(data_np, target_np)
-    best_params.append(('Ada Boost',nn_random.best_params_, nn_random.best_score_))
+    best_params.append(('Neural Networks',nn_random.best_params_, nn_random.best_score_))
     print(nn_random.best_params_)
     print(nn_random.best_score_)
 
@@ -372,7 +373,12 @@ if cross_val == 0:
     print(classification_report(target_test, test_predictions))
     
     # Random Forest
-    clf = RandomForestClassifier(n_estimators=300, max_depth=None, min_samples_split=20, min_samples_leaf = 8, random_state=rand_st)
+    clf = RandomForestClassifier(n_estimators=1000, 
+                                 max_depth=None, 
+                                 min_samples_split=5, 
+                                 min_samples_leaf = 2, 
+                                 max_features = 'auto',                                 
+                                 random_state=rand_st)
     clf.fit(data_np, target_np)
     test_predictions = clf.predict(data_test)
     scores_ACC = clf.score(data_test, target_test)
@@ -381,23 +387,25 @@ if cross_val == 0:
     print(classification_report(target_test, test_predictions))
 
     # AdaBoost
-    clf=AdaBoostClassifier(n_estimators = 100,
+    clf=AdaBoostClassifier(n_estimators = 950,
                            base_estimator = None,
-                           learning_rate = 0.1, 
+                           learning_rate = 0.1,
+                           algorithm = 'SAMME.R',
                            random_state = rand_st)
     clf.fit(data_np, target_np)
     test_predictions = clf.predict(data_test)
     scores_ACC = clf.score(data_test, target_test)
     print("AdaBoost Train Accuracy:",clf.score(data_np, target_np))
     print('AdaBoost Test Acc:', scores_ACC)
-    print(classification_report(target_test, test_predictions))\
+    print(classification_report(target_test, test_predictions))
 
     # Gradient Boosting
-    clf=GradientBoostingClassifier(n_estimators = 100, 
+    clf=GradientBoostingClassifier(n_estimators = 850, 
                                    loss = 'deviance', 
-                                   learning_rate = 0.1, 
-                                   max_depth = 3, 
-                                   min_samples_split = 3, 
+                                   learning_rate = 0.01, 
+                                   max_depth = 7, 
+                                   min_samples_split = 20, 
+                                   min_samples_leaf = 2,
                                    random_state = rand_st)
     clf.fit(data_np, target_np)
     test_predictions = clf.predict(data_test)
@@ -407,12 +415,12 @@ if cross_val == 0:
     print(classification_report(target_test, test_predictions))
     
      # Neural Network
-    clf=MLPClassifier(activation = 'relu',
-                  solver = 'adam',
-                  alpha = 0.0001,
-                  max_iter = 100,
-                  hidden_layer_sizes = (10,), 
-                  random_state = rand_st)
+    clf=MLPClassifier(activation = 'logistic',
+                      learning_rate = 'adaptive',
+                      solver = 'adam',
+                      alpha = 0.01,
+                      hidden_layer_sizes = (200,100), 
+                      random_state = rand_st)
     clf.fit(data_np, target_np)
     test_predictions = clf.predict(data_test)
     scores_ACC = clf.score(data_test, target_test)
@@ -430,7 +438,6 @@ if cross_val == 0:
     print(classification_report(target_test, test_predictions))       
     
     # XGBoost
-     # Neural Network
     clf=xgb.XGBClassifier()
     clf.fit(data_np, target_np)
     test_predictions = clf.predict(data_test)
@@ -446,9 +453,9 @@ if cross_val == 1:
     
     
     scorers = {'Accuracy': 'accuracy', 
-               'Precision': make_scorer(precision_score, average='micro'),
-               'Recall': make_scorer(recall_score, average = 'micro'),
-               'F1': make_scorer(f1_score, average = 'micro'),
+               #'Precision': make_scorer(precision_score, average='micro'),
+               #'Recall': make_scorer(recall_score, average = 'micro'),
+               #'F1': make_scorer(f1_score, average = 'micro'),
                'AUC' : make_scorer(roc_auc_score, needs_proba= True, average = 'macro', multi_class ='ovr')}
     
     
@@ -464,32 +471,37 @@ if cross_val == 1:
                                  random_state=rand_st)
     scores = cross_validate(clf, data_np, target_np, scoring=scorers, cv=5)
     scores_Acc = scores['test_Accuracy']
-    scores_Pre = scores['test_Precision']
-    scores_Rec = scores['test_Recall']
-    scores_F1 = scores['test_F1']
+    #scores_Pre = scores['test_Precision']
+    #scores_Rec = scores['test_Recall']
+    #scores_F1 = scores['test_F1']
     scores_AUC = scores['test_AUC']
     print("Decision Tree Acc: %0.4f (+/- %0.4f)" % (scores_Acc.mean(), scores_Acc.std() * 2))                               
-    print("Decision Tree Precision: %0.4f (+/- %0.4f)" % (scores_Pre.mean(), scores_Pre.std() * 2))                               
-    print("Decision Tree Recall: %0.4f (+/- %0.4f)" % (scores_Rec.mean(), scores_Rec.std() * 2))                               
-    print("Decision Tree F1: %0.4f (+/- %0.4f)" % (scores_F1.mean(), scores_F1.std() * 2))          
+    #print("Decision Tree Precision: %0.4f (+/- %0.4f)" % (scores_Pre.mean(), scores_Pre.std() * 2))                               
+    #print("Decision Tree Recall: %0.4f (+/- %0.4f)" % (scores_Rec.mean(), scores_Rec.std() * 2))                               
+    #print("Decision Tree F1: %0.4f (+/- %0.4f)" % (scores_F1.mean(), scores_F1.std() * 2))          
     print("Random Forest AUC: %0.4f (+/- %0.4f)" % (scores_AUC.mean(), scores_AUC.std() * 2))                          
     print("CV Runtime:", time.time()-start_ts)
-    
+        
     
     #SciKit Random Forest - Cross Val
     print()
     start_ts=time.time()
-    clf = RandomForestClassifier(n_estimators=300, max_depth=None, min_samples_split=20, min_samples_leaf = 8, random_state=rand_st)
+    clf = RandomForestClassifier(n_estimators=1000, 
+                                 max_depth=None, 
+                                 min_samples_split=5, 
+                                 min_samples_leaf = 2, 
+                                 max_features = 'auto',                                 
+                                 random_state=rand_st)
     scores = cross_validate(clf, data_np, target_np, scoring=scorers, cv=5)
     scores_Acc = scores['test_Accuracy']
-    scores_Pre = scores['test_Precision']
-    scores_Rec = scores['test_Recall']
-    scores_F1 = scores['test_F1']
+    #scores_Pre = scores['test_Precision']
+    #scores_Rec = scores['test_Recall']
+    #scores_F1 = scores['test_F1']
     scores_AUC = scores['test_AUC']
     print("Random Forest Acc: %0.4f (+/- %0.4f)" % (scores_Acc.mean(), scores_Acc.std() * 2))                               
-    print("Random Forest Tree Precision: %0.4f (+/- %0.4f)" % (scores_Pre.mean(), scores_Pre.std() * 2))                               
-    print("Random Forest Tree Recall: %0.4f (+/- %0.4f)" % (scores_Rec.mean(), scores_Rec.std() * 2))                               
-    print("Random Forest F1: %0.4f (+/- %0.4f)" % (scores_F1.mean(), scores_F1.std() * 2))                               
+    #print("Random Forest Tree Precision: %0.4f (+/- %0.4f)" % (scores_Pre.mean(), scores_Pre.std() * 2))                               
+    #print("Random Forest Tree Recall: %0.4f (+/- %0.4f)" % (scores_Rec.mean(), scores_Rec.std() * 2))                               
+    #print("Random Forest F1: %0.4f (+/- %0.4f)" % (scores_F1.mean(), scores_F1.std() * 2))                               
     print("Random Forest AUC: %0.4f (+/- %0.4f)" % (scores_AUC.mean(), scores_AUC.std() * 2))     
     print("CV Runtime:", time.time()-start_ts)
     
@@ -497,22 +509,23 @@ if cross_val == 1:
     #SciKit Gradient Boosting - Cross Val
     print()
     start_ts=time.time()
-    clf=GradientBoostingClassifier(n_estimators = 100, 
+    clf=GradientBoostingClassifier(n_estimators = 850, 
                                    loss = 'deviance', 
-                                   learning_rate = 0.1, 
-                                   max_depth = 3, 
-                                   min_samples_split = 3, 
+                                   learning_rate = 0.01, 
+                                   max_depth = 7, 
+                                   min_samples_split = 20, 
+                                   min_samples_leaf = 2,
                                    random_state = rand_st)
     scores = cross_validate(estimator = clf, X = data_np, y = target_np, scoring = scorers, cv =5 )
     scores_Acc = scores['test_Accuracy']
-    scores_Pre = scores['test_Precision']
-    scores_Rec = scores['test_Recall']
-    scores_F1 = scores['test_F1']
+    #scores_Pre = scores['test_Precision']
+    #scores_Rec = scores['test_Recall']
+    #scores_F1 = scores['test_F1']
     scores_AUC = scores['test_AUC']                                                                                                                                 
     print("Gradient Boosting Acc: %0.4f (+/- %0.4f)" % (scores_Acc.mean(), scores_Acc.std() * 2))                               
-    print("Gradient Boosting Precision: %0.4f (+/- %0.4f)" % (scores_Pre.mean(), scores_Pre.std() * 2))                               
-    print("Gradient Boosting Recall: %0.4f (+/- %0.4f)" % (scores_Rec.mean(), scores_Rec.std() * 2))                               
-    print("Gradient Boosting F1: %0.4f (+/- %0.4f)" % (scores_F1.mean(), scores_F1.std() * 2))                               
+    #print("Gradient Boosting Precision: %0.4f (+/- %0.4f)" % (scores_Pre.mean(), scores_Pre.std() * 2))                               
+    #print("Gradient Boosting Recall: %0.4f (+/- %0.4f)" % (scores_Rec.mean(), scores_Rec.std() * 2))                               
+    #print("Gradient Boosting F1: %0.4f (+/- %0.4f)" % (scores_F1.mean(), scores_F1.std() * 2))                               
     print("Gradient Boosting AUC: %0.4f (+/- %0.4f)" % (scores_AUC.mean(), scores_AUC.std() * 2))     
     print("CV Runtime:", time.time()-start_ts)
     
@@ -520,20 +533,21 @@ if cross_val == 1:
     #SciKit Ada Boosting - Cross Val
     print()
     start_ts=time.time()
-    clf=AdaBoostClassifier(n_estimators = 100,
+    clf=AdaBoostClassifier(n_estimators = 950,
                            base_estimator = None,
-                           learning_rate = 0.1, 
+                           learning_rate = 0.1,
+                           algorithm = 'SAMME.R',
                            random_state = rand_st)
     scores = cross_validate(estimator = clf, X = data_np, y = target_np, scoring = scorers, cv =5 )
     scores_Acc = scores['test_Accuracy']
-    scores_Pre = scores['test_Precision']
-    scores_Rec = scores['test_Recall']
-    scores_F1 = scores['test_F1']
+    #scores_Pre = scores['test_Precision']
+    #scores_Rec = scores['test_Recall']
+    #scores_F1 = scores['test_F1']
     scores_AUC = scores['test_AUC'] 
     print("Ada Boost Acc: %0.4f (+/- %0.4f)" % (scores_Acc.mean(), scores_Acc.std() * 2))                               
-    print("Ada Boost Precision: %0.4f (+/- %0.4f)" % (scores_Pre.mean(), scores_Pre.std() * 2))                               
-    print("Ada Boost Recall: %0.4f (+/- %0.4f)" % (scores_Rec.mean(), scores_Rec.std() * 2))                               
-    print("Ada Boost F1: %0.4f (+/- %0.4f)" % (scores_F1.mean(), scores_F1.std() * 2))                               
+    #print("Ada Boost Precision: %0.4f (+/- %0.4f)" % (scores_Pre.mean(), scores_Pre.std() * 2))                               
+    #print("Ada Boost Recall: %0.4f (+/- %0.4f)" % (scores_Rec.mean(), scores_Rec.std() * 2))                               
+    #print("Ada Boost F1: %0.4f (+/- %0.4f)" % (scores_F1.mean(), scores_F1.std() * 2))                               
     print("Ada Boost AUC: %0.4f (+/- %0.4f)" % (scores_AUC.mean(), scores_AUC.std() * 2))                          
     print("CV Runtime:", time.time()-start_ts)
     
@@ -542,21 +556,21 @@ if cross_val == 1:
     print()
     start_ts=time.time()
     clf=MLPClassifier(activation = 'logistic',
-                      solver = 'lbfgs',
-                      alpha = 0.0001,
-                      max_iter = 100,
-                      hidden_layer_sizes = (10,), 
+                      learning_rate = 'adaptive',
+                      solver = 'adam',
+                      alpha = 0.01,
+                      hidden_layer_sizes = (200,100), 
                       random_state = rand_st)
     scores = cross_validate(estimator = clf, X = data_np, y = target_np, scoring = scorers, cv =5 )
     scores_Acc = scores['test_Accuracy']
-    scores_Pre = scores['test_Precision']
-    scores_Rec = scores['test_Recall']
-    scores_F1 = scores['test_F1']
+    #scores_Pre = scores['test_Precision']
+    #scores_Rec = scores['test_Recall']
+    #scores_F1 = scores['test_F1']
     scores_AUC = scores['test_AUC']                                                                                                                                     
     print("Neural Network Acc: %0.4f (+/- %0.4f)" % (scores_Acc.mean(), scores_Acc.std() * 2))                               
-    print("Neural Network Precision: %0.4f (+/- %0.4f)" % (scores_Pre.mean(), scores_Pre.std() * 2))                               
-    print("Neural Network Recall: %0.4f (+/- %0.4f)" % (scores_Rec.mean(), scores_Rec.std() * 2))                               
-    print("Neural Network F1: %0.4f (+/- %0.4f)" % (scores_F1.mean(), scores_F1.std() * 2))                               
+    #print("Neural Network Precision: %0.4f (+/- %0.4f)" % (scores_Pre.mean(), scores_Pre.std() * 2))                               
+    #print("Neural Network Recall: %0.4f (+/- %0.4f)" % (scores_Rec.mean(), scores_Rec.std() * 2))                               
+    #print("Neural Network F1: %0.4f (+/- %0.4f)" % (scores_F1.mean(), scores_F1.std() * 2))                               
     print("Neural Network AUC: %0.4f (+/- %0.4f)" % (scores_AUC.mean(), scores_AUC.std() * 2))                              
     print("CV Runtime:", time.time()-start_ts)
     
@@ -589,14 +603,14 @@ if cross_val == 1:
     clf=CatBoostClassifier(task_type = 'GPU')
     scores=cross_validate(estimator = clf, X = data_np, y = target_np, scoring = scorers, cv =5 )
     scores_Acc = scores['test_Accuracy']
-    scores_Pre = scores['test_Precision']
-    scores_Rec = scores['test_Recall']
-    scores_F1 = scores['test_F1']
+    #scores_Pre = scores['test_Precision']
+    #scores_Rec = scores['test_Recall']
+    #scores_F1 = scores['test_F1']
     scores_AUC = scores['test_AUC']                                                                                                                                      
     print("SVM Acc: %0.4f (+/- %0.4f)" % (scores_Acc.mean(), scores_Acc.std() * 2))                               
-    print("SVM Precision: %0.4f (+/- %0.4f)" % (scores_Pre.mean(), scores_Pre.std() * 2))                               
-    print("SVM Recall: %0.4f (+/- %0.4f)" % (scores_Rec.mean(), scores_Rec.std() * 2))                               
-    print("SVM F1: %0.4f (+/- %0.4f)" % (scores_F1.mean(), scores_F1.std() * 2))                               
+    #print("SVM Precision: %0.4f (+/- %0.4f)" % (scores_Pre.mean(), scores_Pre.std() * 2))                               
+    #print("SVM Recall: %0.4f (+/- %0.4f)" % (scores_Rec.mean(), scores_Rec.std() * 2))                               
+    #print("SVM F1: %0.4f (+/- %0.4f)" % (scores_F1.mean(), scores_F1.std() * 2))                               
     print("SVM AUC: %0.4f (+/- %0.4f)" % (scores_AUC.mean(), scores_AUC.std() * 2))                                
     print("CV Runtime:", time.time()-start_ts)
     
@@ -606,14 +620,12 @@ if cross_val == 1:
     clf=xgb.XGBClassifier()
     scores=cross_validate(estimator = clf, X = data_np, y = target_np, scoring = scorers, cv =5 )
     scores_Acc = scores['test_Accuracy']
-    scores_Pre = scores['test_Precision']
-    scores_Rec = scores['test_Recall']
-    scores_F1 = scores['test_F1']
+    #scores_Pre = scores['test_Precision']
+    #scores_Rec = scores['test_Recall']
+    #scores_F1 = scores['test_F1']
     scores_AUC = scores['test_AUC']                                                                                                                                      
-    print("XGBoost Acc: %0.4f (+/- %0.4f)" % (scores_Acc.mean(), scores_Acc.std() * 2))                               
-    print("XGBoost Precision: %0.4f (+/- %0.4f)" % (scores_Pre.mean(), scores_Pre.std() * 2))                               
-    print("XGBoost Recall: %0.4f (+/- %0.4f)" % (scores_Rec.mean(), scores_Rec.std() * 2))                               
-    print("XGBoost F1: %0.4f (+/- %0.4f)" % (scores_F1.mean(), scores_F1.std() * 2))                               
+    print("XGBoost Acc: %0.4f (+/- %0.4f)" % (scores_Acc.mean(), scores_Acc.std() * 2))                                                          
+    #print("XGBoost F1: %0.4f (+/- %0.4f)" % (scores_F1.mean(), scores_F1.std() * 2))                               
     print("XGBoost AUC: %0.4f (+/- %0.4f)" % (scores_AUC.mean(), scores_AUC.std() * 2))                                
     print("CV Runtime:", time.time()-start_ts)
         
