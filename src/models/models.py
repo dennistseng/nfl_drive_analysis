@@ -54,14 +54,14 @@ warnings.filterwarnings("ignore", category=sklearn.exceptions.ConvergenceWarning
 #####################
 
 imb_class=2                                         #Control switch for type of sampling to deal with imbalanced class (0=None, 1=SMOTE, 2=NearMiss)
-cross_val=1                                         #Control Switch for CV
+cross_val=3                                         #Control Switch for CV
 norm_features=0                                     #Normalize features switch
-feat_select=1                                       #Control Switch for Feature Selection
+feat_select=0                                       #Control Switch for Feature Selection
 fs_type=2                                           #Feature Selection type (1=Stepwise Backwards Removal, 2=Wrapper Select, 3=Univariate Selection)
 lv_filter=0                                         #Control switch for low variance filter on features
 feat_start=1                                        #Start column of features
 k_cnt=5                                             #Number of 'Top k' best ranked features to select, only applies for fs_types 1 and 3
-param_tuning = 0                                    #Turn on model parameter tuning
+param_tuning = 1                                    #Turn on model parameter tuning
 
 
 #Set global model parameters
@@ -193,20 +193,19 @@ if feat_select==1:
     temp=[]
     temp_idx=[]
     temp_del=[]
-    for i in range(len(data_np[0])):
+    for i in range(len(data_np.columns)):
         if sel_idx[i]==1:                                                           #Selected Features get added to temp header
             temp.append(data_np.columns[i+feat_start])
             temp_idx.append(i)
         else:                                                                       #Indexes of non-selected features get added to delete array
             temp_del.append(i)
     print('Selected', temp)
-    print('Features (total/selected):', len(data_np[0]), len(temp))
+    print('Features (total/selected):', len(data_np.columns), len(temp))
     print('\n')
                 
     ##3) Filter selected columns from original dataset #########
     selected_features = list(data_np.columns[np.array(sel_idx).astype(bool)])                          #Deletes non-selected features by index)
     data_np = data_np[selected_features]
-
 
 
 
@@ -380,7 +379,66 @@ if cross_val == 0:
     print("Random Forest Train Accuracy:",clf.score(data_np, target_np))
     print('Random Forest Test Acc:', scores_ACC)
     print(classification_report(target_test, test_predictions))
+
+    # AdaBoost
+    clf=AdaBoostClassifier(n_estimators = 100,
+                           base_estimator = None,
+                           learning_rate = 0.1, 
+                           random_state = rand_st)
+    clf.fit(data_np, target_np)
+    test_predictions = clf.predict(data_test)
+    scores_ACC = clf.score(data_test, target_test)
+    print("AdaBoost Train Accuracy:",clf.score(data_np, target_np))
+    print('AdaBoost Test Acc:', scores_ACC)
+    print(classification_report(target_test, test_predictions))\
+
+    # Gradient Boosting
+    clf=GradientBoostingClassifier(n_estimators = 100, 
+                                   loss = 'deviance', 
+                                   learning_rate = 0.1, 
+                                   max_depth = 3, 
+                                   min_samples_split = 3, 
+                                   random_state = rand_st)
+    clf.fit(data_np, target_np)
+    test_predictions = clf.predict(data_test)
+    scores_ACC = clf.score(data_test, target_test)
+    print("Gradient Boosting Train Accuracy:",clf.score(data_np, target_np))
+    print('Gradient Boosting Test Acc:', scores_ACC)
+    print(classification_report(target_test, test_predictions))
     
+     # Neural Network
+    clf=MLPClassifier(activation = 'relu',
+                  solver = 'adam',
+                  alpha = 0.0001,
+                  max_iter = 100,
+                  hidden_layer_sizes = (10,), 
+                  random_state = rand_st)
+    clf.fit(data_np, target_np)
+    test_predictions = clf.predict(data_test)
+    scores_ACC = clf.score(data_test, target_test)
+    print("NN Train Accuracy:",clf.score(data_np, target_np))
+    print('NN Test Acc:', scores_ACC)
+    print(classification_report(target_test, test_predictions))   
+    
+    # Catboost
+    clf=CatBoostClassifier(task_type = 'GPU')
+    clf.fit(data_np, target_np)
+    test_predictions = clf.predict(data_test)
+    scores_ACC = clf.score(data_test, target_test)
+    print("CatBoost Train Accuracy:",clf.score(data_np, target_np))
+    print('CatBoost Test Acc:', scores_ACC)
+    print(classification_report(target_test, test_predictions))       
+    
+    # XGBoost
+     # Neural Network
+    clf=xgb.XGBClassifier()
+    clf.fit(data_np, target_np)
+    test_predictions = clf.predict(data_test)
+    scores_ACC = clf.score(data_test, target_test)
+    print("XGBoost Train Accuracy:",clf.score(data_np, target_np))
+    print('XGBoost Test Acc:', scores_ACC)
+    print(classification_report(target_test, test_predictions))   
+
 
 ####Cross-Val Classifiers####
 if cross_val == 1:
