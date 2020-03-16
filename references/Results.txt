@@ -1,0 +1,41 @@
+Decision Tree Acc: 0.7944 (+/- 0.0315)
+Decision Tree Precision: 0.7944 (+/- 0.0315)
+Decision Tree Recall: 0.7944 (+/- 0.0315)
+Decision Tree F1: 0.7944 (+/- 0.0315)
+Random Forest AUC: 0.9145 (+/- 0.0264)
+CV Runtime: 1.3102962970733643
+
+Random Forest Acc: 0.7866 (+/- 0.1296)
+Random Forest Tree Precision: 0.7866 (+/- 0.1296)
+Random Forest Tree Recall: 0.7866 (+/- 0.1296)
+Random Forest F1: 0.7866 (+/- 0.1296)
+Random Forest AUC: 0.9060 (+/- 0.1173)
+CV Runtime: 38.715758085250854
+
+Gradient Boosting Acc: 0.8240 (+/- 0.0722)
+Gradient Boosting Precision: 0.8240 (+/- 0.0722)
+Gradient Boosting Recall: 0.8240 (+/- 0.0722)
+Gradient Boosting F1: 0.8240 (+/- 0.0722)
+Gradient Boosting AUC: 0.9376 (+/- 0.0445)
+CV Runtime: 98.76188969612122
+
+Ada Boost Acc: 0.7583 (+/- 0.0223)
+Ada Boost Precision: 0.7583 (+/- 0.0223)
+Ada Boost Recall: 0.7583 (+/- 0.0223)
+Ada Boost F1: 0.7583 (+/- 0.0223)
+Ada Boost AUC: 0.9059 (+/- 0.0138)
+CV Runtime: 17.03894066810608
+
+Neural Network Acc: 0.5241 (+/- 0.0746)
+Neural Network Precision: 0.5241 (+/- 0.0746)
+Neural Network Recall: 0.5241 (+/- 0.0746)
+Neural Network F1: 0.5241 (+/- 0.0746)
+Neural Network AUC: 0.7402 (+/- 0.0357)
+CV Runtime: 9.339077711105347
+
+SVM Acc: 0.5041 (+/- 0.1000)
+SVM Precision: 0.5041 (+/- 0.1000)
+SVM Recall: 0.5041 (+/- 0.1000)
+SVM F1: 0.5041 (+/- 0.1000)
+SVM AUC: 0.7241 (+/- 0.0918)
+CV Runtime: 534.2523066997528

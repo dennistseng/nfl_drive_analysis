@@ -82,14 +82,5 @@ rfconfusionMatrix = confusion_matrix(target_test, rfpredictions)
 
 print(classification_report(target_test, rfpredictions))
 
-'''
-# Scale new Drives dataset
-from sklearn.preprocessing import MinMaxScaler
-scaler = MinMaxScaler()
-min_max_scaler = sk.preprocessing.MinMaxScaler().fit(drive_train)
-normDrivesProcessed = min_max_scaler.transform(drive_train)
-normDrivesProcessed = pd.DataFrame(normDrivesProcessed, columns = drive_train.columns)
-normDrivesTest = pd.DataFrame(min_max_scaler.transform(drive_test), columns = drive_test.columns)
 
-normDrivesProcessed.head()
-'''
+# Scale new Drives dataset

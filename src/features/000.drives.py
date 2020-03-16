@@ -358,4 +358,28 @@ Drives.rename(columns={'StartingYdsToGo':'cd_start_yds_to_go', 'StartingTimeLeft
 del Drives['year']
 
 #%%
+
+# Output dataset with categorical variables
 Drives.to_csv('../../data/drives/drives.csv', index = False)
+
+
+# Create cleaned for analysis
+Drives.columns[Drives.isna().any()].tolist()
+
+# Change certain columns to categorical variables
+Drives['month'] = Drives['month'].astype('category')
+Drives['qtr'] = Drives['qtr'].astype('category')
+
+# Create dummies
+Drives['posteam_type'] = pd.get_dummies(Drives['posteam_type'], drop_first = True)
+Drives.rename({'posteam_type': 'home_team'}, axis=1, inplace=True)
+Drives = pd.get_dummies(Drives)
+
+
+# Reorders columns
+
+reorder = Drives.columns.tolist()
+reorder.insert(0, reorder.pop(5))
+Drives = Drives[reorder]
+
+Drives.to_csv('../../data/drives/drives_analysis.csv', index = False)
