@@ -54,7 +54,7 @@ warnings.filterwarnings("ignore", category=sklearn.exceptions.ConvergenceWarning
 #####################
 
 imb_class=2                                         #Control switch for type of sampling to deal with imbalanced class (0=None, 1=SMOTE, 2=NearMiss)
-cross_val=1                                         #Control Switch for CV
+cross_val=0                                         #Control Switch for CV
 norm_features=0                                     #Normalize features switch
 feat_select=1                                       #Control Switch for Feature Selection
 fs_type=2                                           #Feature Selection type (1=Stepwise Backwards Removal, 2=Wrapper Select, 3=Univariate Selection)
@@ -356,6 +356,9 @@ print('--ML Model Output--', '\n')
 
 # Non-Cross Validation
 if cross_val == 0:
+    
+    feature_importances = []
+    
     # Decision Tree
     clf = DecisionTreeClassifier(criterion='gini', 
                                  splitter='best', 
@@ -371,6 +374,7 @@ if cross_val == 0:
     print("Decision Tree Train Accuracy:",clf.score(data_np, target_np))
     print('Decision Tree Test Acc:', scores_ACC)
     print(classification_report(target_test, test_predictions))
+    feature_importances.append(('decision tree', clf.feature_importances_))
     
     # Random Forest
     clf = RandomForestClassifier(n_estimators=1000, 
@@ -385,6 +389,7 @@ if cross_val == 0:
     print("Random Forest Train Accuracy:",clf.score(data_np, target_np))
     print('Random Forest Test Acc:', scores_ACC)
     print(classification_report(target_test, test_predictions))
+    feature_importances.append(('random forest', clf.feature_importances_))
 
     # AdaBoost
     clf=AdaBoostClassifier(n_estimators = 950,
@@ -398,6 +403,7 @@ if cross_val == 0:
     print("AdaBoost Train Accuracy:",clf.score(data_np, target_np))
     print('AdaBoost Test Acc:', scores_ACC)
     print(classification_report(target_test, test_predictions))
+    feature_importances.append(('adaboost', clf.feature_importances_))
 
     # Gradient Boosting
     clf=GradientBoostingClassifier(n_estimators = 850, 
@@ -413,29 +419,31 @@ if cross_val == 0:
     print("Gradient Boosting Train Accuracy:",clf.score(data_np, target_np))
     print('Gradient Boosting Test Acc:', scores_ACC)
     print(classification_report(target_test, test_predictions))
+    feature_importances.append(('gradient boost', clf.feature_importances_))
     
      # Neural Network
-    clf=MLPClassifier(activation = 'logistic',
+    clfnn=MLPClassifier(activation = 'logistic',
                       learning_rate = 'adaptive',
                       solver = 'adam',
                       alpha = 0.01,
                       hidden_layer_sizes = (200,100), 
                       random_state = rand_st)
-    clf.fit(data_np, target_np)
-    test_predictions = clf.predict(data_test)
+    clfnn.fit(data_np, target_np)
+    test_predictions = clfnn.predict(data_test)
     scores_ACC = clf.score(data_test, target_test)
     print("NN Train Accuracy:",clf.score(data_np, target_np))
     print('NN Test Acc:', scores_ACC)
-    print(classification_report(target_test, test_predictions))   
+    print(classification_report(target_test, test_predictions))
     
     # Catboost
-    clf=CatBoostClassifier(task_type = 'GPU')
+    clf=CatBoostClassifier(task_type = 'GPU', silent = True)
     clf.fit(data_np, target_np)
     test_predictions = clf.predict(data_test)
     scores_ACC = clf.score(data_test, target_test)
     print("CatBoost Train Accuracy:",clf.score(data_np, target_np))
     print('CatBoost Test Acc:', scores_ACC)
     print(classification_report(target_test, test_predictions))       
+    feature_importances.append(('Catboost', clf.feature_importances_))
     
     # XGBoost
     clf=xgb.XGBClassifier()
@@ -444,8 +452,16 @@ if cross_val == 0:
     scores_ACC = clf.score(data_test, target_test)
     print("XGBoost Train Accuracy:",clf.score(data_np, target_np))
     print('XGBoost Test Acc:', scores_ACC)
-    print(classification_report(target_test, test_predictions))   
-
+    print(classification_report(target_test, test_predictions))
+    feature_importances.append(('XGboost', clf.feature_importances_))
+    
+    fi = []
+    # Built-in Feature Importances
+    for f in feature_importances:
+        feat = pd.DataFrame(data_np.columns)
+        values = pd.DataFrame(f[1])
+        fi.append((f[0],feat.join(values, lsuffix = 'val')))
+    
 
 ####Cross-Val Classifiers####
 if cross_val == 1:
@@ -479,7 +495,7 @@ if cross_val == 1:
     #print("Decision Tree Precision: %0.4f (+/- %0.4f)" % (scores_Pre.mean(), scores_Pre.std() * 2))                               
     #print("Decision Tree Recall: %0.4f (+/- %0.4f)" % (scores_Rec.mean(), scores_Rec.std() * 2))                               
     #print("Decision Tree F1: %0.4f (+/- %0.4f)" % (scores_F1.mean(), scores_F1.std() * 2))          
-    print("Random Forest AUC: %0.4f (+/- %0.4f)" % (scores_AUC.mean(), scores_AUC.std() * 2))                          
+    print("Decision Tree AUC: %0.4f (+/- %0.4f)" % (scores_AUC.mean(), scores_AUC.std() * 2))                          
     print("CV Runtime:", time.time()-start_ts)
         
     
@@ -600,7 +616,7 @@ if cross_val == 1:
     #Catboost Classifier - Cross Val
     print()
     start_ts=time.time()
-    clf=CatBoostClassifier(task_type = 'GPU')
+    clf=CatBoostClassifier(task_type = 'GPU', silent = True)
     scores=cross_validate(estimator = clf, X = data_np, y = target_np, scoring = scorers, cv =5 )
     scores_Acc = scores['test_Accuracy']
     #scores_Pre = scores['test_Precision']
@@ -628,4 +644,4 @@ if cross_val == 1:
     #print("XGBoost F1: %0.4f (+/- %0.4f)" % (scores_F1.mean(), scores_F1.std() * 2))                               
     print("XGBoost AUC: %0.4f (+/- %0.4f)" % (scores_AUC.mean(), scores_AUC.std() * 2))                                
     print("CV Runtime:", time.time()-start_ts)
-        
+    
