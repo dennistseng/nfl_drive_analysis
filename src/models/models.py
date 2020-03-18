@@ -40,6 +40,9 @@ from imblearn.over_sampling import SMOTE
 from imblearn.under_sampling import NearMiss
 from imblearn.metrics import classification_report_imbalanced
 
+import shap
+import lime
+
 from collections import Counter
 
 #Handle annoying warnings
@@ -54,12 +57,12 @@ warnings.filterwarnings("ignore", category=sklearn.exceptions.ConvergenceWarning
 #####################
 
 imb_class=2                                         #Control switch for type of sampling to deal with imbalanced class (0=None, 1=SMOTE, 2=NearMiss)
-cross_val=0                                         #Control Switch for CV
-norm_features=0                                     #Normalize features switch
+cross_val=1                                         #Control Switch for CV
+norm_features=1                                     #Normalize features switch
 feat_select=1                                       #Control Switch for Feature Selection
 fs_type=2                                           #Feature Selection type (1=Stepwise Backwards Removal, 2=Wrapper Select, 3=Univariate Selection)
 lv_filter=0                                         #Control switch for low variance filter on features
-feat_start=1                                        #Start column of features
+feat_start=0                                        #Start column of features
 k_cnt=5                                             #Number of 'Top k' best ranked features to select, only applies for fs_types 1 and 3
 param_tuning = 0                                    #Turn on model parameter tuning
 
@@ -112,7 +115,7 @@ if norm_features==1:
     normDrivesProcessed = pd.DataFrame(normDrivesProcessed, columns = data_train.columns)
     target_np = pd.DataFrame(min_max_scaler.transform(drive_test), columns = drive_test.columns)
     '''
-    data_np=pd.DataFrame(scale(data_train), columns = data_train.columns)
+    data_np=pd.DataFrame(scale(data_np), columns = data_np.columns)
 
 
 #############################################################################
@@ -454,6 +457,9 @@ if cross_val == 0:
     print('XGBoost Test Acc:', scores_ACC)
     print(classification_report(target_test, test_predictions))
     feature_importances.append(('XGboost', clf.feature_importances_))
+
+    clf.save_model('../../models/xgbmodel.bst')
+
     
     fi = []
     # Built-in Feature Importances
@@ -485,7 +491,7 @@ if cross_val == 1:
                                  max_features=None,
                                  class_weight='balanced',
                                  random_state=rand_st)
-    scores = cross_validate(clf, data_np, target_np, scoring=scorers, cv=5)
+    scores = cross_validate(clf, data_np, target_np, scoring=scorers, cv= 10)
     scores_Acc = scores['test_Accuracy']
     #scores_Pre = scores['test_Precision']
     #scores_Rec = scores['test_Recall']
@@ -508,7 +514,7 @@ if cross_val == 1:
                                  min_samples_leaf = 2, 
                                  max_features = 'auto',                                 
                                  random_state=rand_st)
-    scores = cross_validate(clf, data_np, target_np, scoring=scorers, cv=5)
+    scores = cross_validate(clf, data_np, target_np, scoring=scorers, cv= 10)
     scores_Acc = scores['test_Accuracy']
     #scores_Pre = scores['test_Precision']
     #scores_Rec = scores['test_Recall']
@@ -532,7 +538,7 @@ if cross_val == 1:
                                    min_samples_split = 20, 
                                    min_samples_leaf = 2,
                                    random_state = rand_st)
-    scores = cross_validate(estimator = clf, X = data_np, y = target_np, scoring = scorers, cv =5 )
+    scores = cross_validate(estimator = clf, X = data_np, y = target_np, scoring = scorers, cv = 10 )
     scores_Acc = scores['test_Accuracy']
     #scores_Pre = scores['test_Precision']
     #scores_Rec = scores['test_Recall']
@@ -554,7 +560,7 @@ if cross_val == 1:
                            learning_rate = 0.1,
                            algorithm = 'SAMME.R',
                            random_state = rand_st)
-    scores = cross_validate(estimator = clf, X = data_np, y = target_np, scoring = scorers, cv =5 )
+    scores = cross_validate(estimator = clf, X = data_np, y = target_np, scoring = scorers, cv = 10 )
     scores_Acc = scores['test_Accuracy']
     #scores_Pre = scores['test_Precision']
     #scores_Rec = scores['test_Recall']
@@ -577,7 +583,7 @@ if cross_val == 1:
                       alpha = 0.01,
                       hidden_layer_sizes = (200,100), 
                       random_state = rand_st)
-    scores = cross_validate(estimator = clf, X = data_np, y = target_np, scoring = scorers, cv =5 )
+    scores = cross_validate(estimator = clf, X = data_np, y = target_np, scoring = scorers, cv = 10 )
     scores_Acc = scores['test_Accuracy']
     #scores_Pre = scores['test_Precision']
     #scores_Rec = scores['test_Recall']
@@ -599,7 +605,7 @@ if cross_val == 1:
             C = 1.0,
             probability = True,
             random_state = rand_st)
-    scores=cross_validate(estimator = clf, X = data_np, y = target_np, scoring = scorers, cv =5 )
+    scores=cross_validate(estimator = clf, X = data_np, y = target_np, scoring = scorers, cv = 10 )
     scores_Acc = scores['test_Accuracy']
     scores_Pre = scores['test_Precision']
     scores_Rec = scores['test_Recall']
@@ -617,7 +623,7 @@ if cross_val == 1:
     print()
     start_ts=time.time()
     clf=CatBoostClassifier(task_type = 'GPU', silent = True)
-    scores=cross_validate(estimator = clf, X = data_np, y = target_np, scoring = scorers, cv =5 )
+    scores=cross_validate(estimator = clf, X = data_np, y = target_np, scoring = scorers, cv =  10)
     scores_Acc = scores['test_Accuracy']
     #scores_Pre = scores['test_Precision']
     #scores_Rec = scores['test_Recall']
@@ -634,7 +640,7 @@ if cross_val == 1:
     print()
     start_ts=time.time()
     clf=xgb.XGBClassifier()
-    scores=cross_validate(estimator = clf, X = data_np, y = target_np, scoring = scorers, cv =5 )
+    scores=cross_validate(estimator = clf, X = data_np, y = target_np, scoring = scorers, cv = 10 )
     scores_Acc = scores['test_Accuracy']
     #scores_Pre = scores['test_Precision']
     #scores_Rec = scores['test_Recall']
